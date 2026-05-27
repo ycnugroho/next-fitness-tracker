@@ -109,6 +109,9 @@ describe("workout form seed builders", () => {
         ],
       },
     });
+    expect(
+      buildBlankWorkoutFormSeed(exerciseNamesFixture),
+    ).not.toHaveProperty("historyPrefetchExerciseNames");
   });
 
   it("builds an edit seed that preserves the workout values and id", () => {
@@ -136,6 +139,9 @@ describe("workout form seed builders", () => {
         ],
       },
     });
+    expect(
+      buildEditWorkoutFormSeed(workoutFixture, exerciseNamesFixture),
+    ).not.toHaveProperty("historyPrefetchExerciseNames");
   });
 
   it("builds a duplicate form seed from the helper pipeline", () => {
@@ -144,6 +150,7 @@ describe("workout form seed builders", () => {
     ).toEqual({
       persistMode: "create",
       exerciseNames: exerciseNamesFixture,
+      historyPrefetchExerciseNames: ["Bench Press"],
       initialValues: {
         name: "Copy of Push Day",
         date: "",
@@ -300,6 +307,7 @@ describe("workout form seed builders", () => {
       exercises: [],
     });
     expect(duplicateSeed.templateValuesByExerciseName).toEqual({});
+    expect(duplicateSeed.historyPrefetchExerciseNames).toEqual([]);
     expect(
       Object.getPrototypeOf(duplicateSeed.templateValuesByExerciseName),
     ).toBe(Object.prototype);

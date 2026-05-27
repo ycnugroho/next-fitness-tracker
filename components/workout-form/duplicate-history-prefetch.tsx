@@ -1,8 +1,8 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useEffect, useMemo, useRef } from "react";
-import { unstable_serialize, useSWRConfig } from "swr";
+import { useMemo } from "react";
+import useSWR, { unstable_serialize, useSWRConfig } from "swr";
 import {
   getExerciseHistory,
   getExerciseHistoryKey,
@@ -26,43 +26,57 @@ function getUniqueExerciseNames(exerciseNames: string[]): string[] {
   return uniqueNames;
 }
 
+function ExerciseHistoryPrefetch({
+  exerciseName,
+  userId,
+}: {
+  exerciseName: string;
+  userId: string | null | undefined;
+}) {
+  useSWR(
+    getExerciseHistoryKey({ exerciseName, userId }),
+    () => getExerciseHistory(exerciseName),
+    {
+      shouldRetryOnError: false,
+    },
+  );
+
+  return null;
+}
+
 export default function DuplicateWorkoutHistoryPrefetch({
   exerciseNames,
 }: {
   exerciseNames: string[];
 }) {
   const { isLoaded, userId } = useAuth();
-  const { cache, mutate } = useSWRConfig();
-  const requestedCacheKeysRef = useRef(new Set<string>());
+  const { cache } = useSWRConfig();
   const uniqueExerciseNames = useMemo(
     () => getUniqueExerciseNames(exerciseNames),
     [exerciseNames],
   );
-
-  useEffect(() => {
+  const exerciseNamesToPrefetch = useMemo(() => {
     if (!isLoaded) {
-      return;
+      return [];
     }
 
-    for (const exerciseName of uniqueExerciseNames) {
+    return uniqueExerciseNames.filter((exerciseName) => {
       const historyKey = getExerciseHistoryKey({ exerciseName, userId });
       const serializedKey = unstable_serialize(historyKey);
 
-      if (
-        requestedCacheKeysRef.current.has(serializedKey) ||
-        cache.get(serializedKey) !== undefined
-      ) {
-        continue;
-      }
+      return cache.get(serializedKey) === undefined;
+    });
+  }, [cache, isLoaded, uniqueExerciseNames, userId]);
 
-      requestedCacheKeysRef.current.add(serializedKey);
-      void mutate(historyKey, getExerciseHistory(exerciseName), {
-        populateCache: true,
-        revalidate: false,
-        throwOnError: false,
-      }).catch(() => undefined);
-    }
-  }, [cache, isLoaded, mutate, uniqueExerciseNames, userId]);
-
-  return null;
+  return (
+    <>
+      {exerciseNamesToPrefetch.map((exerciseName) => (
+        <ExerciseHistoryPrefetch
+          key={exerciseName}
+          exerciseName={exerciseName}
+          userId={userId}
+        />
+      ))}
+    </>
+  );
 }

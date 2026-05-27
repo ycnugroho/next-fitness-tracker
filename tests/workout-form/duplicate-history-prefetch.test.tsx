@@ -2,9 +2,10 @@
 
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, waitFor } from "@testing-library/react";
-import { SWRConfig, unstable_serialize } from "swr";
+import { act, cleanup, render, waitFor } from "@testing-library/react";
+import useSWR, { SWRConfig, unstable_serialize } from "swr";
 import {
+  getExerciseHistory,
   getExerciseHistoryKey,
   type ExerciseHistoryKey,
 } from "@/components/exercise/exercise-history-data";
@@ -51,6 +52,24 @@ function cacheKey(exerciseName: string) {
   });
 
   return unstable_serialize(historyKey);
+}
+
+async function flushEffects() {
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
+function HistoryConsumer({ exerciseName }: { exerciseName: string }) {
+  useSWR(
+    getExerciseHistoryKey({ exerciseName, userId: authState.userId }),
+    () => getExerciseHistory(exerciseName),
+    {
+      dedupingInterval: 0,
+    },
+  );
+
+  return null;
 }
 
 describe("DuplicateWorkoutHistoryPrefetch", () => {
@@ -144,9 +163,9 @@ describe("DuplicateWorkoutHistoryPrefetch", () => {
       </SWRConfig>,
     );
 
-    await waitFor(() => {
-      expect(fetchMock).not.toHaveBeenCalled();
-    });
+    await flushEffects();
+
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(cache.get(cacheKey("Bench Press"))?.data).toEqual([
       {
         date: "2026-04-01",
@@ -169,6 +188,8 @@ describe("DuplicateWorkoutHistoryPrefetch", () => {
       </SWRConfig>,
     );
 
+    await flushEffects();
+
     expect(fetchMock).not.toHaveBeenCalled();
     expect(cache.get(cacheKey("Bench Press"))).toBeUndefined();
 
@@ -190,6 +211,33 @@ describe("DuplicateWorkoutHistoryPrefetch", () => {
         },
       ]);
     });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("shares an in-flight prefetch with normal exercise history readers", async () => {
+    const fetchMock = vi.mocked(fetch);
+    const pendingHistory = new Promise<Response>(() => {});
+    fetchMock.mockReturnValue(pendingHistory);
+    const cache = new Map();
+
+    const { rerender } = render(
+      <SWRConfig value={{ provider: () => cache }}>
+        <DuplicateWorkoutHistoryPrefetch exerciseNames={["Bench Press"]} />
+      </SWRConfig>,
+    );
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    rerender(
+      <SWRConfig value={{ provider: () => cache }}>
+        <DuplicateWorkoutHistoryPrefetch exerciseNames={["Bench Press"]} />
+        <HistoryConsumer exerciseName="Bench Press" />
+      </SWRConfig>,
+    );
+    await flushEffects();
+
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -221,10 +269,9 @@ describe("DuplicateWorkoutHistoryPrefetch", () => {
         <DuplicateWorkoutHistoryPrefetch exerciseNames={["Bench Press"]} />
       </SWRConfig>,
     );
+    await flushEffects();
 
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(cache.get(cacheKey("Bench Press"))?.data).toBeUndefined();
   });
 });

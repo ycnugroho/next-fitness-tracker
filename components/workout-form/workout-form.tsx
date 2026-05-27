@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import DuplicateWorkoutHistoryPrefetch from "@/components/workout-form/duplicate-history-prefetch";
 import ExerciseItem from "@/components/workout-form/exercise-item";
 import WorkoutFormHeader from "@/components/workout-form/workout-form-header";
 import WorkoutFormActionHeader, {
@@ -111,6 +112,7 @@ export default function WorkoutForm(props: WorkoutFormProps) {
     persistMode,
     templateValuesByExerciseName,
     exerciseNames,
+    historyPrefetchExerciseNames,
   } = props;
   const workoutId = "workoutId" in props ? props.workoutId : undefined;
   const [failedSaveSeedKey, setFailedSaveSeedKey] = useState<string | null>(
@@ -265,6 +267,12 @@ export default function WorkoutForm(props: WorkoutFormProps) {
 
   return (
     <form noValidate onSubmit={handleSubmit(onSubmit)} aria-busy={isSubmitting}>
+      {historyPrefetchExerciseNames?.length ? (
+        <DuplicateWorkoutHistoryPrefetch
+          exerciseNames={historyPrefetchExerciseNames}
+        />
+      ) : null}
+
       <WorkoutFormActionHeader saveStatus={saveStatus} />
 
       <FieldSet

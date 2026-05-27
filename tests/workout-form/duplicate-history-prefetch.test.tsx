@@ -241,6 +241,55 @@ describe("DuplicateWorkoutHistoryPrefetch", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("does not refetch prefetched history on window focus or reconnect", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock
+      .mockResolvedValueOnce(historyResponse("Bench History"))
+      .mockResolvedValue(historyResponse("Unexpected Refetch"));
+    const cache = new Map();
+    let triggerFocus: (() => void) | undefined;
+    let triggerReconnect: (() => void) | undefined;
+
+    render(
+      <SWRConfig
+        value={{
+          provider: () => cache,
+          dedupingInterval: 0,
+          initFocus: (callback) => {
+            triggerFocus = callback;
+            return () => {};
+          },
+          initReconnect: (callback) => {
+            triggerReconnect = callback;
+            return () => {};
+          },
+        }}
+      >
+        <DuplicateWorkoutHistoryPrefetch exerciseNames={["Bench Press"]} />
+      </SWRConfig>,
+    );
+
+    await waitFor(() => {
+      expect(cache.get(cacheKey("Bench Press"))?.data).toEqual([
+        {
+          date: "2026-04-02",
+          notes: "",
+          workoutId: 11,
+          workoutName: "Bench History",
+          sets: [],
+        },
+      ]);
+    });
+
+    await act(async () => {
+      triggerFocus?.();
+      triggerReconnect?.();
+    });
+    await flushEffects();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("treats fetch failures as best-effort background work", async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockResolvedValueOnce(

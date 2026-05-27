@@ -37,6 +37,8 @@ function ExerciseHistoryPrefetch({
     getExerciseHistoryKey({ exerciseName, userId }),
     () => getExerciseHistory(exerciseName),
     {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
       shouldRetryOnError: false,
     },
   );

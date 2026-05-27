@@ -11,43 +11,12 @@ import { useAuth } from "@clerk/nextjs";
 import { useState } from "react";
 import useSWR from "swr";
 import type { ExerciseHistoryEntry } from "@/lib/types";
-import { exerciseHistoryEntrySchema } from "@/lib/types";
 import ExerciseInstanceItem from "./exercise-instance-item";
 import { Spinner } from "@/components/ui/spinner";
-import { errorResponseSchema, parseJsonResponse } from "@/lib/json-response";
-
-function getExerciseHistoryKey({
-  exerciseName,
-  userId,
-}: {
-  exerciseName: string;
-  userId: string | null | undefined;
-}) {
-  return ["exercise-history", userId ?? "signed-out", exerciseName] as const;
-}
-
-async function getExerciseHistory(exerciseName: string) {
-  const response = await fetch(
-    `/api/exercises/history?name=${encodeURIComponent(exerciseName)}`,
-  );
-
-  if (!response.ok) {
-    let errorMessage = `Failed to fetch data: ${response.status} ${response.statusText}`;
-
-    try {
-      const errorBody = await parseJsonResponse(response, errorResponseSchema);
-      if (errorBody.error) {
-        errorMessage = errorBody.error;
-      }
-    } catch (jsonError) {
-      console.error("Failed to parse error JSON:", jsonError);
-    }
-
-    throw new Error(errorMessage);
-  }
-
-  return parseJsonResponse(response, exerciseHistoryEntrySchema.array());
-}
+import {
+  getExerciseHistory,
+  getExerciseHistoryKey,
+} from "@/components/exercise/exercise-history-data";
 
 export default function ExerciseHistoryModal({
   exerciseName,

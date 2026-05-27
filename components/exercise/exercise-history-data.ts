@@ -12,6 +12,8 @@ export function getExerciseHistoryKey({
   return ["exercise-history", userId ?? "signed-out", exerciseName] as const;
 }
 
+export type ExerciseHistoryKey = ReturnType<typeof getExerciseHistoryKey>;
+
 export async function getExerciseHistory(
   exerciseName: string,
 ): Promise<ExerciseHistoryEntry[]> {

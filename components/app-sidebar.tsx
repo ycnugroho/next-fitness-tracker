@@ -1,9 +1,7 @@
 "use client";
-
 import { Download, Dumbbell, Home, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Sidebar,
@@ -17,34 +15,16 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { UserButton, useUser } from "@clerk/nextjs";
 
 const items = [
-  {
-    title: "Home",
-    url: "/",
-    icon: Home,
-  },
-  {
-    title: "Workouts",
-    url: "/workouts",
-    icon: Dumbbell,
-  },
-  {
-    title: "Exercises",
-    url: "/exercises",
-    icon: ListChecks,
-  },
-  {
-    title: "Export",
-    url: "/export",
-    icon: Download,
-  },
+  { title: "Home", url: "/", icon: Home },
+  { title: "Workouts", url: "/workouts", icon: Dumbbell },
+  { title: "Exercises", url: "/exercises", icon: ListChecks },
+  { title: "Export", url: "/export", icon: Download },
 ];
 
 export function AppSidebar() {
   const { setOpenMobile, isMobile } = useSidebar();
-  const { user } = useUser();
   const pathname = usePathname() ?? "/";
 
   const handleLinkClick = () => {
@@ -98,26 +78,6 @@ export function AppSidebar() {
         <SidebarMenu className="gap-2">
           <SidebarMenuItem>
             <ThemeToggle />
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <div className="border-sidebar-border bg-sidebar-accent/45 flex items-center gap-3 rounded-lg border px-3 py-3">
-              <UserButton
-                appearance={{
-                  elements: {
-                    avatarBox: "h-10 w-10",
-                    userButtonTrigger: "focus:shadow-none",
-                  },
-                }}
-              />
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-semibold">
-                  {user?.fullName || user?.username || "User"}
-                </span>
-                <span className="text-sidebar-foreground/55 truncate text-xs">
-                  {user?.primaryEmailAddress?.emailAddress || ""}
-                </span>
-              </div>
-            </div>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

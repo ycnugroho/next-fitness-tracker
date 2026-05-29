@@ -1,6 +1,5 @@
 import "server-only";
 
-import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import type { Workout } from "@/lib/types";
@@ -14,6 +13,8 @@ import type {
   WorkoutFormSeed,
   WorkoutFormSeedMode,
 } from "@/components/workout-form/form-types";
+
+const DEFAULT_USER_ID = "default-user";
 
 function cloneWorkoutDraft(values: WorkoutDraft): WorkoutDraft {
   return structuredClone(values);
@@ -59,7 +60,6 @@ function toDuplicateWorkoutDraft(workout: Workout): WorkoutDraft {
 
 function zeroWorkoutSetValues(workout: WorkoutDraft): WorkoutDraft {
   const zeroedWorkout = cloneWorkoutDraft(workout);
-
   zeroedWorkout.exercises.forEach((exercise) => {
     exercise.notes = "";
     exercise.sets.forEach((set) => {
@@ -68,7 +68,6 @@ function zeroWorkoutSetValues(workout: WorkoutDraft): WorkoutDraft {
       set.rpe = "";
     });
   });
-
   return zeroedWorkout;
 }
 
@@ -76,7 +75,6 @@ function toTemplateValuesByExerciseName(
   exercises: ExerciseTemplateValues[],
 ): ExerciseTemplateValuesByName {
   const templateValuesByExerciseName: ExerciseTemplateValuesByName = {};
-
   for (const exercise of exercises) {
     if (!Object.hasOwn(templateValuesByExerciseName, exercise.name)) {
       Object.defineProperty(templateValuesByExerciseName, exercise.name, {
@@ -87,18 +85,7 @@ function toTemplateValuesByExerciseName(
       });
     }
   }
-
   return templateValuesByExerciseName;
-}
-
-async function getSignedInUserId(): Promise<string> {
-  const { userId, redirectToSignIn } = await auth();
-
-  if (!userId) {
-    return redirectToSignIn();
-  }
-
-  return userId;
 }
 
 async function getExerciseNames(userId: string): Promise<string[]> {
@@ -131,7 +118,6 @@ async function getOwnedWorkout(
       },
     },
   });
-
   return ownedWorkout ?? null;
 }
 
@@ -175,7 +161,6 @@ export function buildDuplicateWorkoutFormSeed(
   exerciseNames: string[] = [],
 ): CreateWorkoutFormSeed {
   const workoutTemplate = toDuplicateWorkoutDraft(workout);
-
   return {
     persistMode: "create",
     exerciseNames,
@@ -205,7 +190,7 @@ export async function buildWorkoutFormSeed({
   kind: WorkoutFormSeedMode;
   workoutId?: number;
 }): Promise<WorkoutFormSeed | null> {
-  const userId = await getSignedInUserId();
+  const userId = DEFAULT_USER_ID;
 
   if (kind === "create") {
     return buildBlankWorkoutFormSeed(await getExerciseNames(userId));

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db/drizzle";
 import { Button } from "@/components/ui/button";
 import type { WorkoutSummary } from "@/lib/types";
@@ -8,13 +7,9 @@ import { Plus } from "lucide-react";
 import { desc, eq } from "drizzle-orm";
 import { workout } from "@/db/schema";
 
+const DEFAULT_USER_ID = "default-user";
+
 async function getWorkouts() {
-  const { userId, redirectToSignIn } = await auth();
-
-  if (!userId) {
-    return redirectToSignIn();
-  }
-
   const data: WorkoutSummary[] = await db
     .select({
       id: workout.id,
@@ -24,15 +19,13 @@ async function getWorkouts() {
       date: workout.date,
     })
     .from(workout)
-    .where(eq(workout.userId, userId))
+    .where(eq(workout.userId, DEFAULT_USER_ID))
     .orderBy(desc(workout.date));
-
   return data;
 }
 
 export default async function WorkoutsPage() {
   const workouts = await getWorkouts();
-
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5 px-5 py-6 sm:px-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

@@ -1,4 +1,3 @@
-import { ClerkProvider } from "@clerk/nextjs";
 import "@/styles/globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
@@ -8,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
+import AnnouncementBanner from "@/components/AnnouncementBanner";
 
 const appName = "Lifting Log";
 const appDescription = "Log and track your workouts";
@@ -46,23 +46,22 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ClerkProvider afterSignOutUrl="/">
-          <ThemeProvider disableTransitionOnChange>
-            <SidebarProvider>
-              <AppSidebar />
-              <div id="modal"></div>
-              <SidebarInset>
-                <main>
-                  <SidebarRouteTrigger />
-                  {children}
-                </main>
-              </SidebarInset>
-            </SidebarProvider>
-            <Toaster richColors position="top-center" />
-          </ThemeProvider>
-          <SpeedInsights />
-          <Analytics />
-        </ClerkProvider>
+        <ThemeProvider disableTransitionOnChange>
+          <SidebarProvider>
+            <AppSidebar />
+            <div id="modal"></div>
+            <SidebarInset>
+              <main>
+                <SidebarRouteTrigger />
+                <AnnouncementBanner />
+                {children}
+              </main>
+            </SidebarInset>
+          </SidebarProvider>
+          <Toaster richColors position="top-center" />
+        </ThemeProvider>
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );

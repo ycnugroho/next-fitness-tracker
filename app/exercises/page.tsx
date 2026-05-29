@@ -1,15 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
 import ExercisesUI from "@/components/exercise/exercises-ui";
 import { getExerciseSummaryForUser } from "@/app/exercises/data";
 
 async function getExerciseSummary() {
-  const { userId, redirectToSignIn } = await auth();
-
-  if (!userId) {
-    return redirectToSignIn();
-  }
-
-  return getExerciseSummaryForUser(userId);
+  return getExerciseSummaryForUser("default-user");
 }
 
 export default async function ExercisesPage() {

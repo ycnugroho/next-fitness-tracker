@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -45,22 +46,10 @@ const getSaveStatus = ({
   isDirty: boolean;
   isSubmitting: boolean;
 }): WorkoutSaveStatus => {
-  if (isSubmitting) {
-    return "saving";
-  }
-
-  if (hasSaveFailed) {
-    return "failed";
-  }
-
-  if (persistMode === "create") {
-    return "not_saved";
-  }
-
-  if (isDirty) {
-    return "unsaved";
-  }
-
+  if (isSubmitting) return "saving";
+  if (hasSaveFailed) return "failed";
+  if (persistMode === "create") return "not_saved";
+  if (isDirty) return "unsaved";
   return "saved";
 };
 
@@ -94,18 +83,13 @@ function getTemplateExerciseByName({
   exerciseName: string;
   templateValuesByExerciseName?: ExerciseTemplateValuesByName;
 }): ExerciseTemplateValues | undefined {
-  if (!exerciseName || !templateValuesByExerciseName) {
-    return undefined;
-  }
-
-  if (!Object.hasOwn(templateValuesByExerciseName, exerciseName)) {
-    return undefined;
-  }
-
+  if (!exerciseName || !templateValuesByExerciseName) return undefined;
+  if (!Object.hasOwn(templateValuesByExerciseName, exerciseName)) return undefined;
   return templateValuesByExerciseName[exerciseName];
 }
 
 export default function WorkoutForm(props: WorkoutFormProps) {
+  const router = useRouter();
   const {
     initialValues,
     persistMode,
@@ -113,11 +97,10 @@ export default function WorkoutForm(props: WorkoutFormProps) {
     exerciseNames,
   } = props;
   const workoutId = "workoutId" in props ? props.workoutId : undefined;
-  const [failedSaveSeedKey, setFailedSaveSeedKey] = useState<string | null>(
-    null,
-  );
+  const [failedSaveSeedKey, setFailedSaveSeedKey] = useState<string | null>(null);
   const [localCreatePromotion, setLocalCreatePromotion] =
     useState<LocalCreatePromotion | null>(null);
+
   const incomingFormSession: WorkoutFormSession = {
     persistMode,
     exerciseNames,
@@ -136,9 +119,11 @@ export default function WorkoutForm(props: WorkoutFormProps) {
           workoutId: localCreatePromotion.workoutId,
         }
       : incomingFormSession;
+
   const hasSaveFailed = failedSaveSeedKey === incomingSeedKey;
   const appliedSeedKeyRef = useRef(incomingSeedKey);
   const initializedDateSeedKeyRef = useRef<string | null>(null);
+
   const form = useForm<WorkoutDraft>({
     resolver: zodResolver(workoutFormSchema),
     defaultValues: initialValues,
@@ -156,10 +141,7 @@ export default function WorkoutForm(props: WorkoutFormProps) {
     control,
     name: "exercises",
   });
-  const watchedExercises = useWatch({
-    control,
-    name: "exercises",
-  });
+  const watchedExercises = useWatch({ control, name: "exercises" });
   const currentExercises = watchedExercises ?? getValues("exercises");
   const renderExercises = fields.map((field, index) => ({
     id: field.id,
@@ -175,28 +157,18 @@ export default function WorkoutForm(props: WorkoutFormProps) {
   });
 
   useEffect(() => {
-    if (incomingSeedKey === appliedSeedKeyRef.current) {
-      return;
-    }
-
+    if (incomingSeedKey === appliedSeedKeyRef.current) return;
     appliedSeedKeyRef.current = incomingSeedKey;
     reset(initialValues);
   }, [incomingSeedKey, initialValues, reset]);
 
   useEffect(() => {
-    if (formSession.persistMode !== "create") {
-      return;
-    }
-
-    if (initializedDateSeedKeyRef.current === incomingSeedKey) {
-      return;
-    }
-
+    if (formSession.persistMode !== "create") return;
+    if (initializedDateSeedKeyRef.current === incomingSeedKey) return;
     if (getValues("date")) {
       initializedDateSeedKeyRef.current = incomingSeedKey;
       return;
     }
-
     initializedDateSeedKeyRef.current = incomingSeedKey;
     setValue("date", getBrowserTodayDate(), {
       shouldDirty: false,
@@ -205,25 +177,16 @@ export default function WorkoutForm(props: WorkoutFormProps) {
   }, [formSession.persistMode, getValues, incomingSeedKey, setValue]);
 
   useEffect(() => {
-    if (!hasSaveFailed) {
-      return;
-    }
-
+    if (!hasSaveFailed) return;
     const unsubscribe = subscribe({
       formState: { values: true },
       callback: ({ name, type }) => {
-        if (!name || type === "blur") {
-          return;
-        }
-
+        if (!name || type === "blur") return;
         setFailedSaveSeedKey(null);
         unsubscribe();
       },
     });
-
-    return () => {
-      unsubscribe();
-    };
+    return () => { unsubscribe(); };
   }, [hasSaveFailed, subscribe]);
 
   const onSubmit = async (values: WorkoutDraft) => {
@@ -245,16 +208,14 @@ export default function WorkoutForm(props: WorkoutFormProps) {
     reset(submittedSnapshot);
 
     if (formSession.persistMode === "create") {
-      setLocalCreatePromotion({
-        sourceSeedKey: incomingSeedKey,
-        workoutId: result.workoutId,
-      });
-      window.history.replaceState(
-        window.history.state,
-        "",
-        `/workouts/edit/${result.workoutId}`,
-      );
+      router.push("/workouts?created=true");
+      return;
     }
+
+    setLocalCreatePromotion({
+      sourceSeedKey: incomingSeedKey,
+      workoutId: result.workoutId,
+    });
   };
 
   const replaceExercises = (exercises: WorkoutDraft["exercises"]) => {
@@ -266,13 +227,11 @@ export default function WorkoutForm(props: WorkoutFormProps) {
   return (
     <form noValidate onSubmit={handleSubmit(onSubmit)} aria-busy={isSubmitting}>
       <WorkoutFormActionHeader saveStatus={saveStatus} />
-
       <FieldSet
         disabled={isSubmitting}
         className="mx-auto w-full min-w-0 max-w-3xl px-4 py-5 sm:px-6"
       >
         <WorkoutFormHeader control={control} />
-
         <FieldSet className="min-w-0 gap-4">
           <FieldLegend className="text-primary text-sm font-semibold tracking-[0.2em] uppercase">
             Exercises
@@ -283,17 +242,13 @@ export default function WorkoutForm(props: WorkoutFormProps) {
               const index = block.startIndex + offset;
               const field = fields[index];
               const exerciseName = renderExercises[index]?.name ?? "";
-              const exerciseGroupId =
-                renderExercises[index]?.supersetGroupId ?? null;
+              const exerciseGroupId = renderExercises[index]?.supersetGroupId ?? null;
               const templateExercise = getTemplateExerciseByName({
                 exerciseName,
-                templateValuesByExerciseName:
-                  formSession.templateValuesByExerciseName,
+                templateValuesByExerciseName: formSession.templateValuesByExerciseName,
               });
 
-              if (!field) {
-                return null;
-              }
+              if (!field) return null;
 
               return (
                 <ExerciseItem
@@ -304,42 +259,26 @@ export default function WorkoutForm(props: WorkoutFormProps) {
                   exercises={formSession.exerciseNames}
                   exerciseName={exerciseName}
                   onRemove={() =>
-                    replaceExercises(
-                      removeExerciseAtIndex(getValues("exercises"), index),
-                    )
+                    replaceExercises(removeExerciseAtIndex(getValues("exercises"), index))
                   }
                   onMoveUp={() =>
-                    replaceExercises(
-                      moveExerciseBlock(getValues("exercises"), index, "up"),
-                    )
+                    replaceExercises(moveExerciseBlock(getValues("exercises"), index, "up"))
                   }
                   onMoveDown={() =>
-                    replaceExercises(
-                      moveExerciseBlock(getValues("exercises"), index, "down"),
-                    )
+                    replaceExercises(moveExerciseBlock(getValues("exercises"), index, "down"))
                   }
                   onStartSupersetWithNext={() =>
                     replaceExercises(
-                      startSupersetWithNext(
-                        getValues("exercises"),
-                        index,
-                        createSupersetGroupId(),
-                      ),
+                      startSupersetWithNext(getValues("exercises"), index, createSupersetGroupId()),
                     )
                   }
                   onJoinPreviousSuperset={() =>
                     replaceExercises(
-                      joinSupersetWithPrevious(
-                        getValues("exercises"),
-                        index,
-                        createSupersetGroupId,
-                      ),
+                      joinSupersetWithPrevious(getValues("exercises"), index, createSupersetGroupId),
                     )
                   }
                   onRemoveFromSuperset={() =>
-                    replaceExercises(
-                      removeExerciseFromSuperset(getValues("exercises"), index),
-                    )
+                    replaceExercises(removeExerciseFromSuperset(getValues("exercises"), index))
                   }
                   isFirst={block.startIndex === 0}
                   isLast={block.endIndex === renderExercises.length - 1}
@@ -356,9 +295,7 @@ export default function WorkoutForm(props: WorkoutFormProps) {
               );
             });
 
-            if (block.kind === "single") {
-              return blockContent;
-            }
+            if (block.kind === "single") return blockContent;
 
             return (
               <div
@@ -388,7 +325,6 @@ export default function WorkoutForm(props: WorkoutFormProps) {
             Add Exercise
           </Button>
         </FieldSet>
-
       </FieldSet>
     </form>
   );

@@ -1,4 +1,5 @@
 import "@/styles/globals.css";
+import { Suspense } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -22,12 +23,8 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: appName,
   },
-  formatDetection: {
-    telephone: false,
-  },
-  icons: {
-    apple: "/apple-icon.png",
-  },
+  formatDetection: { telephone: false },
+  icons: { apple: "/apple-icon.png" },
 };
 
 export const viewport: Viewport = {
@@ -53,7 +50,9 @@ export default function RootLayout({
             <SidebarInset>
               <main>
                 <SidebarRouteTrigger />
-                <AnnouncementBanner />
+                <Suspense fallback={null}>
+                  <AnnouncementBanner />
+                </Suspense>
                 {children}
               </main>
             </SidebarInset>

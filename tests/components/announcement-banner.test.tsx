@@ -1,8 +1,9 @@
-// @vitest
+// @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import { type MockedFunction } from "vitest";
+import type { MockedFunction } from "vitest";
+import type { ReadonlyURLSearchParams } from "next/navigation";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 
 vi.mock("next/navigation", () => ({
@@ -13,7 +14,15 @@ vi.mock("next/navigation", () => ({
 import { usePathname, useSearchParams } from "next/navigation";
 
 const mockedUsePathname = usePathname as MockedFunction<typeof usePathname>;
-const mockedUseSearchParams = useSearchParams as MockedFunction<typeof useSearchParams>;
+const mockedUseSearchParams =
+  useSearchParams as MockedFunction<typeof useSearchParams>;
+
+const createSearchParams = (
+  created: string | null
+): ReadonlyURLSearchParams =>
+  ({
+    get: () => created,
+  }) as ReadonlyURLSearchParams;
 
 describe("AnnouncementBanner", () => {
   beforeEach(() => {
@@ -27,9 +36,7 @@ describe("AnnouncementBanner", () => {
 
   it("renders home banner on root path", () => {
     mockedUsePathname.mockReturnValue("/");
-    mockedUseSearchParams.mockReturnValue({
-      get: (key: string) => null,
-    } as any);
+    mockedUseSearchParams.mockReturnValue(createSearchParams(null));
 
     render(<AnnouncementBanner />);
 
@@ -40,9 +47,7 @@ describe("AnnouncementBanner", () => {
 
   it("renders success banner after workout created", () => {
     mockedUsePathname.mockReturnValue("/workouts");
-    mockedUseSearchParams.mockReturnValue({
-      get: (key: string) => (key === "created" ? "true" : null),
-    } as any);
+    mockedUseSearchParams.mockReturnValue(createSearchParams("true"));
 
     render(<AnnouncementBanner />);
 
@@ -53,11 +58,10 @@ describe("AnnouncementBanner", () => {
 
   it("dismisses banner when close button clicked", () => {
     mockedUsePathname.mockReturnValue("/");
-    mockedUseSearchParams.mockReturnValue({
-      get: (key: string) => null,
-    } as any);
+    mockedUseSearchParams.mockReturnValue(createSearchParams(null));
 
     render(<AnnouncementBanner />);
+
     fireEvent.click(screen.getByLabelText(/dismiss banner/i));
 
     expect(

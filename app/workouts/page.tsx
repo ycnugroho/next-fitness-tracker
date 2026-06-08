@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { getIronSession } from "iron-session";
+import { sessionOptions, type SessionData } from "@/lib/session";
 import { db } from "@/db/drizzle";
 import { Button } from "@/components/ui/button";
 import type { WorkoutSummary } from "@/lib/types";
@@ -7,9 +10,11 @@ import { Plus } from "lucide-react";
 import { desc, eq } from "drizzle-orm";
 import { workout } from "@/db/schema";
 
-const DEFAULT_USER_ID = "default-user";
-
 async function getWorkouts() {
+  const cookieStore = await cookies();
+  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  const userId = session.userId ?? 0;
+
   const data: WorkoutSummary[] = await db
     .select({
       id: workout.id,
@@ -19,7 +24,7 @@ async function getWorkouts() {
       date: workout.date,
     })
     .from(workout)
-    .where(eq(workout.userId, DEFAULT_USER_ID))
+    .where(eq(workout.userId, userId))
     .orderBy(desc(workout.date));
   return data;
 }

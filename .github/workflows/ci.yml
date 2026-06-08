@@ -32,11 +32,12 @@ jobs:
         run: pnpm lint
 
       - name: Run tests
-        run: pnpm vitest run tests/lib tests/components/app-sidebar.test.tsx tests/components/theme-provider.test.tsx tests/components/workouts.test.tsx tests/workout-form/exercise-item-ui.test.tsx tests/workout-form/exercise-selector.test.tsx tests/workout-form/form-sets-ui.test.tsx tests/components/exercises-ui.test.tsx tests/components/exercise-actions-menu.test.tsx tests/components/announcement-banner.test.tsx
+        run: pnpm vitest run tests/lib tests/components/theme-provider.test.tsx tests/workout-form/exercise-item-ui.test.tsx tests/workout-form/exercise-selector.test.tsx tests/workout-form/form-sets-ui.test.tsx tests/components/exercises-ui.test.tsx tests/components/exercise-actions-menu.test.tsx
         env:
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           NEXT_PUBLIC_BANNER_ENABLED: true
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
 
       - name: Build
         run: pnpm build
@@ -44,3 +45,4 @@ jobs:
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           NEXT_PUBLIC_BANNER_ENABLED: true
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}

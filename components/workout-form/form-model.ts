@@ -4,6 +4,9 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import type { Workout } from "@/lib/types";
 import { exercise, workout as workoutTable } from "@/db/schema";
+import { cookies } from "next/headers";
+import { getIronSession } from "iron-session";
+import { sessionOptions, type SessionData } from "@/lib/session";
 import type {
   CreateWorkoutFormSeed,
   ExerciseTemplateValues,
@@ -14,7 +17,11 @@ import type {
   WorkoutFormSeedMode,
 } from "@/components/workout-form/form-types";
 
-const DEFAULT_USER_ID = "default-user";
+async function getSessionUserId(): Promise<number> {
+  const cookieStore = await cookies();
+  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  return session.userId ?? 0;
+}
 
 function cloneWorkoutDraft(values: WorkoutDraft): WorkoutDraft {
   return structuredClone(values);
@@ -88,7 +95,7 @@ function toTemplateValuesByExerciseName(
   return templateValuesByExerciseName;
 }
 
-async function getExerciseNames(userId: string): Promise<string[]> {
+async function getExerciseNames(userId: number): Promise<string[]> {
   const exerciseNames = await db
     .selectDistinct({ name: exercise.name })
     .from(workoutTable)
@@ -101,7 +108,7 @@ async function getExerciseNames(userId: string): Promise<string[]> {
 }
 
 async function getOwnedWorkout(
-  userId: string,
+  userId: number,
   workoutId: number,
 ): Promise<Workout | null> {
   const ownedWorkout = await db.query.workout.findFirst({
@@ -190,7 +197,7 @@ export async function buildWorkoutFormSeed({
   kind: WorkoutFormSeedMode;
   workoutId?: number;
 }): Promise<WorkoutFormSeed | null> {
-  const userId = DEFAULT_USER_ID;
+  const userId = await getSessionUserId();
 
   if (kind === "create") {
     return buildBlankWorkoutFormSeed(await getExerciseNames(userId));

@@ -2,16 +2,17 @@
 
 A Next.js App Router workout log for tracking workouts, exercises, exercise history, and spreadsheet exports.
 
-This project extends the original application with automated testing, CI/CD practices, cloud database integration, and application monitoring to improve reliability, maintainability, and deployment readiness.
+This project extends the original application with user authentication, automated testing, CI/CD practices, cloud database integration, and application monitoring to improve reliability, maintainability, security, and deployment readiness.
 
 ---
 
 ## Project Scope
 
-This project focuses on improving the maintainability, observability, and deployment readiness of the Next Fitness Tracker application.
+This project focuses on improving the maintainability, security, observability, and deployment readiness of the Next Fitness Tracker application.
 
 Key enhancements include:
 
+* User authentication using iron-session and bcryptjs
 * Announcement Banner feature
 * Automated testing with Vitest
 * Continuous Integration using GitHub Actions
@@ -26,10 +27,11 @@ Key enhancements include:
 The primary goals of this project are:
 
 1. Improve application reliability through automated testing.
-2. Ensure code quality using CI validation.
+2. Ensure secure user authentication and session management.
 3. Enable cloud-based database management using Turso.
-4. Improve deployment readiness through Azure integration.
-5. Establish monitoring and observability practices.
+4. Ensure code quality using CI validation.
+5. Improve deployment readiness through Azure integration.
+6. Establish monitoring and observability practices.
 
 ---
 
@@ -37,6 +39,7 @@ The primary goals of this project are:
 
 ### Functional Deliverables
 
+* User authentication (register, login, logout, session management)
 * Announcement Banner component
 * Workout tracking functionality
 * Exercise management functionality
@@ -108,6 +111,7 @@ The primary goals of this project are:
 
 #### Yoka — Developer
 
+* Implement user authentication using iron-session and bcryptjs
 * Implement GitHub Actions CI workflow
 * Configure lint, test, and build validation
 * Verify CI pipeline execution
@@ -132,6 +136,7 @@ The primary goals of this project are:
 
 * Execute CI success and failure test scenarios
 * Configure Branch Protection Rules
+* Validate authentication workflow and protected routes
 
 #### Vanya — Developer / DevOps
 
@@ -149,28 +154,6 @@ The primary goals of this project are:
 
 ---
 
-### Week 5
-
-#### Yoka — Developer
-
-* Bug fixing and dependency stabilization
-* Pre-demo validation
-
-#### Vanya — Developer / DevOps
-
-* Finalize Azure Application Insights integration
-* Verify custom telemetry events:
-
-  * `banner_viewed`
-  * `banner_dismissed`
-
-#### Juno — Ops / Cloud
-
-* Finalize README and project documentation
-* Prepare final project report
-
----
-
 ## Technology Stack
 
 ### Frontend
@@ -184,6 +167,11 @@ The primary goals of this project are:
 
 * Turso (LibSQL)
 * Drizzle ORM
+
+### Authentication
+
+* iron-session
+* bcryptjs
 
 ### Testing
 
@@ -208,6 +196,7 @@ The primary goals of this project are:
 * Node.js 24
 * pnpm
 * Turso/LibSQL database credentials
+* SESSION_SECRET for authentication
 
 ---
 
@@ -239,6 +228,60 @@ Required variables:
 TURSO_DATABASE_URL=
 TURSO_AUTH_TOKEN=
 NEXT_PUBLIC_BANNER_ENABLED=true
+SESSION_SECRET=
+```
+
+### Generate SESSION_SECRET
+
+```bash
+openssl rand -base64 32
+```
+
+---
+
+## Authentication
+
+The application uses **iron-session** for session-based authentication and **bcryptjs** for password hashing.
+
+Authentication features include:
+
+* User registration
+* User login
+* User logout
+* Session persistence using encrypted cookies
+* Protected route access through proxy-based validation
+
+### Authentication Endpoints
+
+| Method | Endpoint             | Description                          |
+| ------ | -------------------- | ------------------------------------ |
+| POST   | `/api/auth/register` | Register a new user                  |
+| POST   | `/api/auth/login`    | Authenticate user and create session |
+| POST   | `/api/auth/logout`   | Logout and destroy session           |
+| GET    | `/api/auth/me`       | Retrieve current session information |
+
+### Authentication Flow
+
+```text
+Register
+  ↓
+Store hashed password in Turso
+
+Login
+  ↓
+Verify password using bcryptjs
+  ↓
+Create encrypted session cookie
+
+Protected Route Access
+  ↓
+proxy.ts validates session
+  ↓
+Allow access or redirect to /login
+
+Logout
+  ↓
+Destroy session
 ```
 
 ---
@@ -281,13 +324,14 @@ The GitHub Actions workflow performs:
 3. Vitest execution
 4. Next.js build verification
 
-Announcement Banner tests are included in the CI pipeline and executed automatically during pushes and pull requests.
+Authentication and Announcement Banner tests are executed automatically during pushes and pull requests.
 
 ### Required GitHub Secrets
 
 ```text
 TURSO_DATABASE_URL
 TURSO_AUTH_TOKEN
+SESSION_SECRET
 ```
 
 ---
@@ -302,7 +346,7 @@ The project uses Azure Application Insights and Azure Monitor to provide:
 * Availability monitoring
 * Custom event tracking
 
-Planned custom events include:
+Custom events include:
 
 * `banner_viewed`
 * `banner_dismissed`

@@ -34,6 +34,7 @@ jobs:
         run: pnpm build
         env:
           NODE_ENV: production
+          NEXT_TURBOPACK: false
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}

@@ -17,41 +17,43 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 11
 
-      - name: Install dependencies
+      - name: Install dependencies (skip scripts)
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Rebuild native modules
+      - name: Approve and run build scripts
         run: pnpm rebuild
 
       - name: Build Next.js application
         run: pnpm build
         env:
           NODE_ENV: production
+          NEXT_TURBOPACK: false
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
           NEXT_PUBLIC_BANNER_ENABLED: true
 
-      - name: Prepare standalone package
+      - name: Create deployment package
         run: |
-          cp -r .next/static .next/standalone/.next/static
-          cp -r public .next/standalone/public 2>/dev/null || true
-          # Flatten pnpm symlinks ke real node_modules
-          cd .next/standalone
-          rm -rf node_modules
-          cp -rL ../../node_modules ./node_modules
+          mkdir -p deployment-package
+          # Copy standalone output
+          cp -r .next/standalone/* deployment-package/
+          # Copy static files & public assets manually (required by standalone)
+          mkdir -p deployment-package/.next/static
+          cp -r .next/static/* deployment-package/.next/static/
+          cp -r public deployment-package/ 2>/dev/null || true
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.WEBAPP_NAME }}
           slot-name: 'Production'
-          package: .next/standalone
+          package: deployment-package
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}

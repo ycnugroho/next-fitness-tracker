@@ -171,6 +171,9 @@ export function buildDuplicateWorkoutFormSeed(
   return {
     persistMode: "create",
     exerciseNames,
+    historyPrefetchExerciseNames: workoutTemplate.exercises.map(
+      (exercise) => exercise.name,
+    ),
     initialValues: zeroWorkoutSetValues(workoutTemplate),
     templateValuesByExerciseName: toTemplateValuesByExerciseName(
       workoutTemplate.exercises,

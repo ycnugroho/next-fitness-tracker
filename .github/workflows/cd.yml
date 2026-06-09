@@ -24,17 +24,16 @@ jobs:
         with:
           version: 11
 
-      - name: Install dependencies (skip scripts)
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Approve and run build scripts
+      - name: Rebuild native modules
         run: pnpm rebuild
 
       - name: Build Next.js application
         run: pnpm build
         env:
           NODE_ENV: production
-          NEXT_TURBOPACK: false
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
@@ -48,10 +47,7 @@ jobs:
           cp package.json deployment-package/
           cp next.config.js deployment-package/ 2>/dev/null || true
           cp next.config.mjs deployment-package/ 2>/dev/null || true
-
-      - name: Install production dependencies with npm
-        working-directory: deployment-package
-        run: npm install --omit=dev --ignore-scripts
+          cp -r node_modules deployment-package/
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

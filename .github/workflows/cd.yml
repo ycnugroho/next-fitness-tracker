@@ -47,7 +47,10 @@ jobs:
           cp package.json deployment-package/
           cp next.config.js deployment-package/ 2>/dev/null || true
           cp next.config.mjs deployment-package/ 2>/dev/null || true
-          cp -r node_modules deployment-package/
+
+      - name: Install production dependencies with npm
+        working-directory: deployment-package
+        run: npm install --omit=dev --ignore-scripts
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

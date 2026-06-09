@@ -23,6 +23,17 @@ vi.mock("@/components/ui/sidebar", () => ({
   ),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+}));
+
 vi.mock("@/components/workout-form/exercise-item", async () => {
   return {
     default: function MockExerciseItem({

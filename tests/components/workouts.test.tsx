@@ -27,6 +27,11 @@ vi.mock("next/link", () => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     refresh: refreshMock,
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
   }),
 }));
 
@@ -182,7 +187,7 @@ const workoutSummaryFixture: WorkoutSummary[] = [
 
 const workoutDetailsFixture: Workout = {
   id: 1,
-  userId: "user-1",
+  userId: 1,
   name: "Push Day",
   notes: "Top sets only",
   durationMinutes: 60,

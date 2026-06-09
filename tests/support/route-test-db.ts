@@ -6,7 +6,7 @@ import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 import * as schema from "@/db/schema";
 
 interface SeedWorkoutInput {
-  userId: string;
+  userId: number;
   date?: string;
   name?: string;
   notes?: string;

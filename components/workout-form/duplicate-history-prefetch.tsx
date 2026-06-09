@@ -1,6 +1,5 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
 import { useMemo } from "react";
 import useSWR, { unstable_serialize, useSWRConfig } from "swr";
 import {

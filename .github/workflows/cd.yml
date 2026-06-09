@@ -39,11 +39,16 @@ jobs:
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
           NEXT_PUBLIC_BANNER_ENABLED: true
 
+      - name: Reinstall production deps with npm for deployment
+        run: |
+          cp package.json .next/standalone/
+          cd .next/standalone
+          npm install --omit=dev --ignore-scripts --legacy-peer-deps
+
       - name: Prepare standalone package
         run: |
           cp -r .next/static .next/standalone/.next/static
           cp -r public .next/standalone/public 2>/dev/null || true
-          rm -rf .next/standalone/node_modules/.pnpm
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

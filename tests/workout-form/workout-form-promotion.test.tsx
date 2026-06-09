@@ -15,6 +15,10 @@ import type {
   WorkoutDraft,
 } from "@/components/workout-form/form-types";
 
+const { duplicateHistoryPrefetchMock } = vi.hoisted(() => ({
+  duplicateHistoryPrefetchMock: vi.fn(),
+}));
+
 vi.mock("@/components/ui/sidebar", () => ({
   SidebarTrigger: (props: React.ComponentProps<"button">) => (
     <button type="button" {...props}>
@@ -60,6 +64,18 @@ vi.mock("@/components/workout-form/exercise-item", async () => {
     },
   };
 });
+
+vi.mock("@/components/workout-form/duplicate-history-prefetch", () => ({
+  default: function MockDuplicateWorkoutHistoryPrefetch({
+    exerciseNames,
+  }: {
+    exerciseNames: string[];
+  }) {
+    duplicateHistoryPrefetchMock(exerciseNames);
+
+    return <div data-testid="duplicate-history-prefetch" />;
+  },
+}));
 
 import WorkoutForm from "@/components/workout-form/workout-form";
 
@@ -107,6 +123,8 @@ function getWorkoutSaveCalls(fetchMock: ReturnType<typeof vi.fn>) {
 
 describe("WorkoutForm promotion flow", () => {
   beforeEach(() => {
+    duplicateHistoryPrefetchMock.mockReset();
+
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -131,6 +149,61 @@ describe("WorkoutForm promotion flow", () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("renders duplicate history prefetch when duplicate prefetch names are provided", async () => {
+    const historyPrefetchExerciseNames = ["Bench Press", "Squat"];
+
+    render(
+      <WorkoutForm
+        initialValues={buildWorkoutDraft()}
+        persistMode="create"
+        exerciseNames={exerciseNamesFixture}
+        templateValuesByExerciseName={{
+          "Bench Press": {
+            name: "Bench Press",
+            notes: "",
+            supersetGroupId: null,
+            sets: [{ weight: "200", reps: "6", rpe: "7" }],
+          },
+        }}
+        historyPrefetchExerciseNames={historyPrefetchExerciseNames}
+      />,
+    );
+
+    expect(
+      await screen.findByTestId("duplicate-history-prefetch"),
+    ).toBeTruthy();
+    expect(duplicateHistoryPrefetchMock).toHaveBeenCalledWith(
+      historyPrefetchExerciseNames,
+    );
+  });
+
+  it("does not render duplicate history prefetch for ordinary create forms", () => {
+    render(
+      <WorkoutForm
+        initialValues={buildWorkoutDraft()}
+        persistMode="create"
+        exerciseNames={exerciseNamesFixture}
+      />,
+    );
+
+    expect(screen.queryByTestId("duplicate-history-prefetch")).toBeNull();
+    expect(duplicateHistoryPrefetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not render duplicate history prefetch for update forms", () => {
+    render(
+      <WorkoutForm
+        initialValues={buildWorkoutDraft()}
+        persistMode="update"
+        exerciseNames={exerciseNamesFixture}
+        workoutId={42}
+      />,
+    );
+
+    expect(screen.queryByTestId("duplicate-history-prefetch")).toBeNull();
+    expect(duplicateHistoryPrefetchMock).not.toHaveBeenCalled();
   });
 
   it("initializes a blank create date from the browser after mount", async () => {

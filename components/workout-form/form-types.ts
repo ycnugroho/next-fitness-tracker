@@ -17,25 +17,28 @@ export type WorkoutFormSeed = {
   exerciseNames: string[];
   workoutId?: number;
   templateValuesByExerciseName?: ExerciseTemplateValuesByName;
+  historyPrefetchExerciseNames?: string[];
 };
 
 export type CreateWorkoutFormSeed = Omit<WorkoutFormSeed, "persistMode"> & {
   persistMode: "create";
 };
 
-type CreateWorkoutFormProps = {
+type BaseWorkoutFormProps = {
   initialValues: WorkoutDraft;
-  persistMode: "create";
   exerciseNames: string[];
   templateValuesByExerciseName?: ExerciseTemplateValuesByName;
+  historyPrefetchExerciseNames?: string[];
 };
 
-export type UpdateWorkoutFormProps = {
-  initialValues: WorkoutDraft;
+type CreateWorkoutFormProps = BaseWorkoutFormProps & {
+  persistMode: "create";
+};
+
+export type UpdateWorkoutFormProps = BaseWorkoutFormProps & {
   persistMode: "update";
-  exerciseNames: string[];
   workoutId: number;
-  templateValuesByExerciseName?: ExerciseTemplateValuesByName;
+  historyPrefetchExerciseNames?: never;
 };
 
 export type WorkoutFormProps = CreateWorkoutFormProps | UpdateWorkoutFormProps;

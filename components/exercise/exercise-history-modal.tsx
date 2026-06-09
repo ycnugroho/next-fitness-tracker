@@ -13,6 +13,7 @@ import type { ExerciseHistoryEntry } from "@/lib/types";
 import ExerciseInstanceItem from "./exercise-instance-item";
 import { Spinner } from "@/components/ui/spinner";
 import { errorResponseSchema, parseJsonResponse } from "@/lib/json-response";
+import { exerciseHistoryEntrySchema } from "@/lib/types";
 
 const DEFAULT_USER_ID = "default-user";
 

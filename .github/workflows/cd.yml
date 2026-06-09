@@ -24,8 +24,12 @@ jobs:
         with:
           version: 11
 
+      - name: Disable pnpm symlinks
+        run: echo "node-linker=hoisted" > .npmrc
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        # Menggunakan --no-frozen-lockfile karena kita mengubah cara pnpm bekerja (hoisted)
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
 
       - name: Approve and run build scripts
         run: pnpm rebuild
@@ -42,11 +46,11 @@ jobs:
       - name: Create deployment package
         run: |
           mkdir -p deployment-package
-          # Flag -L sangat krusial di sini untuk membaca symlink pnpm
-          cp -rL .next/standalone/* deployment-package/
+          # Kembali menggunakan cp -r biasa karena symlink sudah dimatikan
+          cp -r .next/standalone/* deployment-package/
           mkdir -p deployment-package/.next/static
-          cp -rL .next/static/* deployment-package/.next/static/
-          cp -rL public deployment-package/ 2>/dev/null || true
+          cp -r .next/static/* deployment-package/.next/static/
+          cp -r public deployment-package/ 2>/dev/null || true
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

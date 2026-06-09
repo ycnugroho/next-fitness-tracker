@@ -2,7 +2,7 @@ name: CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [main, feat/add-auth-login]
   workflow_dispatch:
 
 jobs:

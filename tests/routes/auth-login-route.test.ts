@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   limit: vi.fn(),
 }));
 
+
 vi.mock("@/db/drizzle", () => ({
   db: {
     select: vi.fn(() => ({

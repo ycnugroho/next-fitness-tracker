@@ -24,11 +24,11 @@ jobs:
         with:
           version: 11
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install dependencies (skip scripts)
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Approve builds
-        run: pnpm approve-builds --all 2>/dev/null || true
+      - name: Approve and run build scripts
+        run: pnpm rebuild
 
       - name: Build Next.js application
         run: pnpm build

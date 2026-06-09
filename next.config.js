@@ -2,6 +2,11 @@
 const nextConfig = {
   allowedDevOrigins: ['192.168.56.1'],
   serverExternalPackages: ['@libsql/client', 'bcryptjs', 'iron-session'],
+  experimental: {
+    turbo: {
+      rules: {}
+    }
+  }
 };
 
 module.exports = nextConfig;

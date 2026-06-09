@@ -43,6 +43,7 @@ jobs:
         run: |
           cp -r .next/static .next/standalone/.next/static
           cp -r public .next/standalone/public 2>/dev/null || true
+          rm -rf .next/standalone/node_modules/.pnpm
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

@@ -45,13 +45,9 @@ jobs:
           cp -r .next deployment-package/
           cp -r public deployment-package/ 2>/dev/null || true
           cp package.json deployment-package/
-          cp pnpm-lock.yaml deployment-package/
           cp next.config.js deployment-package/ 2>/dev/null || true
           cp next.config.mjs deployment-package/ 2>/dev/null || true
-
-      - name: Setup pnpm for deployment
-        working-directory: deployment-package
-        run: pnpm install --prod --frozen-lockfile --ignore-scripts
+          cp -r node_modules deployment-package/
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

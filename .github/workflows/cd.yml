@@ -34,7 +34,6 @@ jobs:
         run: pnpm build
         env:
           NODE_ENV: production
-          NEXT_TURBOPACK: false
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
@@ -43,12 +42,15 @@ jobs:
       - name: Create deployment package
         run: |
           mkdir -p deployment-package
-          # Copy standalone output
-          cp -r .next/standalone/* deployment-package/
-          # Copy static files & public assets manually (required by standalone)
-          mkdir -p deployment-package/.next/static
-          cp -r .next/static/* deployment-package/.next/static/
+          cp -r .next deployment-package/
           cp -r public deployment-package/ 2>/dev/null || true
+          cp package.json deployment-package/
+          cp next.config.js deployment-package/ 2>/dev/null || true
+          cp next.config.mjs deployment-package/ 2>/dev/null || true
+
+      - name: Install production dependencies with npm
+        working-directory: deployment-package
+        run: npm install --omit=dev --ignore-scripts
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

@@ -24,8 +24,11 @@ jobs:
         with:
           version: 11
 
-      - name: Install dependencies (skip scripts)
-        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Disable pnpm symlinks for Azure
+        run: echo "node-linker=hoisted" >> .npmrc
+
+      - name: Install dependencies
+        run: pnpm install --ignore-scripts
 
       - name: Approve and run build scripts
         run: pnpm rebuild
@@ -51,7 +54,7 @@ jobs:
 
       - name: Install production dependencies with npm
         working-directory: deployment-package
-        run: npm install --omit=dev --ignore-scripts
+        run: npm install --omit=dev --legacy-peer-deps --ignore-scripts
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

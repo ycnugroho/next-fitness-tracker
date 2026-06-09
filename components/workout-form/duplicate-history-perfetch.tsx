@@ -1,12 +1,11 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
-import { useMemo } from "react";
-import useSWR, { unstable_serialize, useSWRConfig } from "swr";
 import {
     getExerciseHistory,
     getExerciseHistoryKey,
 } from "@/components/exercise/exercise-history-data";
+import { useMemo } from "react";
+import useSWR, { unstable_serialize, useSWRConfig } from "swr";
 
 function getUniqueExerciseNames(exerciseNames: string[]): string[] {
     const seen = new Set<string>();

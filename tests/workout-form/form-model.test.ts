@@ -44,7 +44,7 @@ const workoutFixture: Workout = {
   name: "Push Day",
   notes: "Original notes",
   durationMinutes: 70,
-  userId: "user-1",
+  userId: 1,
   date: "2026-04-04",
   exercises: [
     {
@@ -67,7 +67,7 @@ describe("workout form seed builders", () => {
   beforeEach(() => {
     authMock.mockReset();
     authMock.mockResolvedValue({
-      userId: "user-1",
+      userId: 1,
       redirectToSignIn: vi.fn(),
     });
     findFirstMock.mockReset();

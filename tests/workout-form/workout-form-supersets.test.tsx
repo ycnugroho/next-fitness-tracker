@@ -51,6 +51,17 @@ vi.mock("@/components/workout-form/exercise-item", async () => ({
   },
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+  }),
+}));
+
 import WorkoutForm from "@/components/workout-form/workout-form";
 
 const twoExerciseSupersetFixture: WorkoutDraft = {

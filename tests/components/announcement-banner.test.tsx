@@ -9,6 +9,14 @@ import AnnouncementBanner from "@/components/AnnouncementBanner";
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(),
   useSearchParams: vi.fn(),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    prefetch: vi.fn(),
+  }),
 }));
 
 import { usePathname, useSearchParams } from "next/navigation";

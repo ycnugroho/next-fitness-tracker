@@ -1,8 +1,13 @@
+import { cookies } from "next/headers";
+import { getIronSession } from "iron-session";
+import { sessionOptions, type SessionData } from "@/lib/session";
 import ExercisesUI from "@/components/exercise/exercises-ui";
 import { getExerciseSummaryForUser } from "@/app/exercises/data";
 
 async function getExerciseSummary() {
-  return getExerciseSummaryForUser("default-user");
+  const cookieStore = await cookies();
+  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  return getExerciseSummaryForUser(session.userId ?? 0);
 }
 
 export default async function ExercisesPage() {

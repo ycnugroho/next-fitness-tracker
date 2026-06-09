@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['@libsql/client', 'bcryptjs', 'iron-session'],
+  allowedDevOrigins: ['192.168.56.1'],
 };
 
 module.exports = nextConfig;

@@ -23,10 +23,9 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Build Next.js application
-        run: npx next build
+        run: npm run build
         env:
           NODE_ENV: production
-          NEXT_TURBOPACK: false
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
@@ -35,13 +34,14 @@ jobs:
       - name: Create deployment package
         run: |
           mkdir -p deployment-package
-          cp -r .next/standalone/* deployment-package/
-          mkdir -p deployment-package/.next/static
-          cp -r .next/static/* deployment-package/.next/static/
+          cp -r .next deployment-package/
           cp -r public deployment-package/ 2>/dev/null || true
-
+          cp package.json deployment-package/
+          cp package-lock.json deployment-package/ 2>/dev/null || true
+          cp next.config.js deployment-package/ 2>/dev/null || true
           cd deployment-package
-          npm pkg set scripts.start="node server.js"
+          npm install --omit=dev --legacy-peer-deps --ignore-scripts
+          npm pkg set scripts.start="next start"
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

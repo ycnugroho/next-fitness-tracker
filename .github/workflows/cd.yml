@@ -24,8 +24,11 @@ jobs:
         with:
           version: 11
 
+      - name: Disable pnpm symlinks
+        run: echo "node-linker=hoisted" > .npmrc
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
 
       - name: Approve and run build scripts
         run: pnpm rebuild
@@ -42,15 +45,14 @@ jobs:
       - name: Create deployment package
         run: |
           mkdir -p deployment-package
-          cp -r .next/standalone/. deployment-package/
+          cp -r .next/standalone/* deployment-package/
           mkdir -p deployment-package/.next/static
-          cp -r .next/static/. deployment-package/.next/static/
+          cp -r .next/static/* deployment-package/.next/static/
           cp -r public deployment-package/ 2>/dev/null || true
-          rm -rf deployment-package/node_modules
-
-      - name: Install production deps with npm (flat structure)
-        working-directory: deployment-package
-        run: npm install --omit=dev --ignore-scripts
+          
+          # MANIPULASI PACKAGE.JSON UNTUK MENIPU AZURE
+          cd deployment-package
+          npm pkg set scripts.start="node server.js"
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

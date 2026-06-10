@@ -30,8 +30,8 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/workouts");
-      router.refresh();
+      window.location.href = "/";
+      
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

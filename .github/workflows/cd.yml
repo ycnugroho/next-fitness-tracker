@@ -45,10 +45,14 @@ jobs:
       - name: Create deployment package
         run: |
           mkdir -p deployment-package
-          cp -r .next/standalone/. deployment-package/
+          cp -r .next/standalone/* deployment-package/
           mkdir -p deployment-package/.next/static
-          cp -r .next/static/. deployment-package/.next/static/
+          cp -r .next/static/* deployment-package/.next/static/
           cp -r public deployment-package/ 2>/dev/null || true
+          
+          # MANIPULASI PACKAGE.JSON UNTUK MENIPU AZURE
+          cd deployment-package
+          npm pkg set scripts.start="node server.js"
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

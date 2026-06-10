@@ -19,22 +19,11 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11
-
-      - name: Disable pnpm symlinks
-        run: echo "node-linker=hoisted" > .npmrc
-
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --ignore-scripts
-
-      - name: Approve and run build scripts
-        run: pnpm rebuild
+        run: npm install --legacy-peer-deps
 
       - name: Build Next.js application
-        run: pnpm build
+        run: npm run build
         env:
           NODE_ENV: production
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
@@ -49,8 +38,7 @@ jobs:
           mkdir -p deployment-package/.next/static
           cp -r .next/static/* deployment-package/.next/static/
           cp -r public deployment-package/ 2>/dev/null || true
-          
-          # MANIPULASI PACKAGE.JSON UNTUK MENIPU AZURE
+
           cd deployment-package
           npm pkg set scripts.start="node server.js"
 

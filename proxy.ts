@@ -14,7 +14,7 @@ export async function proxy(request: NextRequest) {
 
   // PERUBAHAN: Jika user sudah login tapi nekat buka /login, tendang ke /home
   if (session.isLoggedIn && isPublic) {
-    return NextResponse.redirect(new URL("/home", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Jika halaman bukan public dan belum login, tendang ke /login

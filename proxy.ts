@@ -7,19 +7,19 @@ const PUBLIC_ROUTES = ["/login", "/register", "/api/auth/login", "/api/auth/regi
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  const isPublic = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
-
-  if (isPublic) {
-    return NextResponse.next();
-  }
-
   const cookieStore = await cookies();
   const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
 
-  if (!session.isLoggedIn) {
-    const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+  const isPublic = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
+
+  // PERUBAHAN: Jika user sudah login tapi nekat buka /login, tendang ke /home
+  if (session.isLoggedIn && isPublic) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  // Jika halaman bukan public dan belum login, tendang ke /login
+  if (!isPublic && !session.isLoggedIn) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   return NextResponse.next();

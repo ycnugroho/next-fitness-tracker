@@ -1,0 +1,106 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: Lint, Test, and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run lint
+        run: pnpm lint
+
+      - name: Run tests
+        run: pnpm vitest run tests/lib tests/components/theme-provider.test.tsx tests/components/workouts.test.tsx tests/workout-form/exercise-item-ui.test.tsx tests/workout-form/exercise-selector.test.tsx tests/workout-form/form-sets-ui.test.tsx tests/components/exercises-ui.test.tsx tests/components/exercise-actions-menu.test.tsx
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          NEXT_PUBLIC_BANNER_ENABLED: true
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+
+      - name: Build
+        run: pnpm build
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          NEXT_PUBLIC_BANNER_ENABLED: true
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+
+  cd:
+    name: Deploy to Azure App Service
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Approve and run build scripts
+        run: pnpm rebuild
+
+      - name: Build Next.js application
+        run: pnpm build
+        env:
+          NODE_ENV: production
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          NEXT_PUBLIC_BANNER_ENABLED: true
+
+      - name: Create deployment package
+        run: |
+          mkdir -p deployment-package
+          cp -r .next/standalone/. deployment-package/
+          mkdir -p deployment-package/.next/static
+          cp -r .next/static/. deployment-package/.next/static/
+          cp -r public deployment-package/ 2>/dev/null || true
+          rm -rf deployment-package/node_modules
+          cd deployment-package
+          npm pkg set scripts.start="node server.js"
+
+      - name: Install production deps with npm
+        working-directory: deployment-package
+        run: npm install --omit=dev --ignore-scripts
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.WEBAPP_NAME }}
+          slot-name: 'Production'
+          package: deployment-package
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}

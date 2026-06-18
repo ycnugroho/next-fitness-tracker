@@ -9,16 +9,18 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
-vi.mock("next/link", () => ({
-  default: ({
+vi.mock("next/link", () => {
+  const MockLink = ({
     href,
     children,
     prefetch: _prefetch,
     ...props
   }: React.ComponentProps<"a"> & { href: string; prefetch?: boolean }) => (
     <a href={href} {...props}>{children}</a>
-  ),
-}));
+  );
+  MockLink.displayName = "MockLink";
+  return { default: MockLink };
+});
 
 vi.mock("@/components/ui/sidebar", () => {
   const pass =

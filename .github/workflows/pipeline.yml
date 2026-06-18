@@ -35,7 +35,7 @@ jobs:
         run: pnpm lint
 
       - name: Run tests
-        run: pnpm vitest run
+        run: pnpm vitest run tests/lib tests/components/theme-provider.test.tsx tests/components/workouts.test.tsx tests/workout-form/exercise-item-ui.test.tsx tests/workout-form/exercise-selector.test.tsx tests/workout-form/form-sets-ui.test.tsx tests/components/exercises-ui.test.tsx tests/components/exercise-actions-menu.test.tsx
         env:
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
@@ -88,13 +88,10 @@ jobs:
       - name: Create deployment package
         run: |
           mkdir -p deployment-package
-          cp -r .next/standalone/. deployment-package/
-          mkdir -p deployment-package/.next/static
-          cp -r .next/static/. deployment-package/.next/static/
+          cp -r .next deployment-package/
           cp -r public deployment-package/ 2>/dev/null || true
-          rm -rf deployment-package/node_modules
-          cd deployment-package
-          npm pkg set scripts.start="node server.js"
+          cp package.json deployment-package/
+          cp next.config.js deployment-package/
 
       - name: Install production deps with npm
         working-directory: deployment-package

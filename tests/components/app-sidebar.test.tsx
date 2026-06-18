@@ -23,10 +23,12 @@ vi.mock("next/link", () => {
 });
 
 vi.mock("@/components/ui/sidebar", () => {
-  const pass =
-    (tag: string) =>
-    ({ children, ...props }: React.ComponentProps<"div">) =>
-      React.createElement(tag, props, children);
+  const pass = (tag: string) => {
+  const Component = ({ children, ...props }: React.ComponentProps<"div">) =>
+    React.createElement(tag, props, children);
+  Component.displayName = `Mock_${tag}`;
+  return Component;
+  };
 
   const SidebarMenuButton = ({
     children,

@@ -27,6 +27,20 @@ vi.mock("@/components/ui/sidebar", () => {
     (tag: string) =>
     ({ children, ...props }: React.ComponentProps<"div">) =>
       React.createElement(tag, props, children);
+
+  const SidebarMenuButton = ({
+    children,
+    asChild: _a,
+    isActive: _i,
+    size: _s,
+    ...props
+  }: React.ComponentProps<"div"> & {
+    asChild?: boolean;
+    isActive?: boolean;
+    size?: string;
+  }) => <div {...props}>{children}</div>;
+  SidebarMenuButton.displayName = "SidebarMenuButton";
+
   return {
     Sidebar: pass("nav"),
     SidebarContent: pass("div"),
@@ -36,24 +50,16 @@ vi.mock("@/components/ui/sidebar", () => {
     SidebarGroupLabel: pass("div"),
     SidebarMenu: pass("ul"),
     SidebarMenuItem: pass("li"),
-    SidebarMenuButton: ({
-      children,
-      asChild: _a,
-      isActive: _i,
-      size: _s,
-      ...props
-    }: React.ComponentProps<"div"> & {
-      asChild?: boolean;
-      isActive?: boolean;
-      size?: string;
-    }) => <div {...props}>{children}</div>,
+    SidebarMenuButton,
     useSidebar: () => ({ setOpenMobile: vi.fn(), isMobile: false }),
   };
 });
 
-vi.mock("@/components/theme-toggle", () => ({
-  ThemeToggle: () => <div data-testid="theme-toggle" />,
-}));
+vi.mock("@/components/theme-toggle", () => {
+  const ThemeToggle = () => <div data-testid="theme-toggle" />;
+  ThemeToggle.displayName = "ThemeToggle";
+  return { ThemeToggle };
+});
 
 import { AppSidebar } from "@/components/app-sidebar";
 

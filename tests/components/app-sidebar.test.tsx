@@ -4,87 +4,100 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
-import { ThemeProvider } from "@/components/theme-provider";
-import { SidebarProvider } from "@/components/ui/sidebar";
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
 
 vi.mock("next/link", () => ({
-  default: (
-    props: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
-      href: string;
-      prefetch?: boolean;
-    },
-  ) => {
-    const { href, children, prefetch, ...anchorProps } = props;
-    void prefetch;
-
-    return (
-      <a href={href} {...anchorProps}>
-        {children}
-      </a>
-    );
-  },
+  default: ({
+    href,
+    children,
+    prefetch: _prefetch,
+    ...props
+  }: React.ComponentProps<"a"> & { href: string; prefetch?: boolean }) => (
+    <a href={href} {...props}>{children}</a>
+  ),
 }));
 
-vi.mock("next/navigation", () => ({
-  usePathname: () => "/workouts/create",
-  useRouter: () => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    refresh: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    prefetch: vi.fn(),
-  }),
-}));
+vi.mock("@/components/ui/sidebar", () => {
+  const pass =
+    (tag: string) =>
+    ({ children, ...props }: React.ComponentProps<"div">) =>
+      React.createElement(tag, props, children);
+  return {
+    Sidebar: pass("nav"),
+    SidebarContent: pass("div"),
+    SidebarFooter: pass("div"),
+    SidebarGroup: pass("div"),
+    SidebarGroupContent: pass("div"),
+    SidebarGroupLabel: pass("div"),
+    SidebarMenu: pass("ul"),
+    SidebarMenuItem: pass("li"),
+    SidebarMenuButton: ({
+      children,
+      asChild: _a,
+      isActive: _i,
+      size: _s,
+      ...props
+    }: React.ComponentProps<"div"> & {
+      asChild?: boolean;
+      isActive?: boolean;
+      size?: string;
+    }) => <div {...props}>{children}</div>,
+    useSidebar: () => ({ setOpenMobile: vi.fn(), isMobile: false }),
+  };
+});
 
-vi.mock("@clerk/nextjs", () => ({
-  UserButton: () => <button type="button">User menu</button>,
-  useUser: () => ({
-    user: {
-      fullName: "Kevin Tester",
-      username: "kevintester",
-      primaryEmailAddress: {
-        emailAddress: "kevin@example.com",
-      },
-    },
-  }),
+vi.mock("@/components/theme-toggle", () => ({
+  ThemeToggle: () => <div data-testid="theme-toggle" />,
 }));
 
 import { AppSidebar } from "@/components/app-sidebar";
 
+const NAV_ITEMS = [
+  { label: "Home",      href: "/" },
+  { label: "Workouts",  href: "/workouts" },
+  { label: "Exercises", href: "/exercises" },
+  { label: "Export",    href: "/export" },
+];
+
 describe("AppSidebar", () => {
   beforeEach(() => {
-    Object.defineProperty(window, "matchMedia", {
-      writable: true,
-      value: vi.fn().mockImplementation((query: string) => ({
-        matches: false,
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-      })),
-    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({ isLoggedIn: false }),
+      }),
+    );
   });
 
   afterEach(() => {
     cleanup();
-    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
   });
 
-  it("exposes light, system, and dark theme controls", () => {
-    render(
-      <ThemeProvider>
-        <SidebarProvider>
-          <AppSidebar />
-        </SidebarProvider>
-      </ThemeProvider>,
-    );
+  it("renders the brand label, nav element, and ThemeToggle", () => {
+    const { container } = render(<AppSidebar />);
+    expect(screen.getByText("Lifting Log")).toBeTruthy();
+    expect(container.querySelector("nav")).toBeTruthy();
+    expect(screen.getByTestId("theme-toggle")).toBeTruthy();
+  });
 
-    expect(screen.getByLabelText("Light theme")).toBeTruthy();
-    expect(screen.getByLabelText("System theme")).toBeTruthy();
-    expect(screen.getByLabelText("Dark theme")).toBeTruthy();
+  it("does not render the logout button when user is logged out", () => {
+    render(<AppSidebar />);
+    expect(screen.queryByLabelText("Logout")).toBeFalsy();
+  });
+
+  it("renders all 4 navigation items with correct labels and hrefs", () => {
+    render(<AppSidebar />);
+    for (const { label, href } of NAV_ITEMS) {
+      expect(screen.getByText(label)).toBeTruthy();
+      expect(
+        screen.getByRole("link", { name: new RegExp(label, "i") })
+          .getAttribute("href"),
+      ).toBe(href);
+    }
   });
 });

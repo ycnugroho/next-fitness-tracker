@@ -49,7 +49,7 @@ export async function createRouteTestDatabase({
   await client.execute(`
     CREATE TABLE workout (
       id INTEGER PRIMARY KEY,
-      user_id TEXT,
+      user_id INTEGER,
       name TEXT NOT NULL,
       notes TEXT NOT NULL DEFAULT '',
       duration_minutes INTEGER,

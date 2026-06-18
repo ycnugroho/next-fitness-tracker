@@ -180,28 +180,24 @@ export function buildDuplicateWorkoutFormSeed(
 
 export function buildWorkoutFormSeed(input: {
   kind: "create";
-  userId: number;
   workoutId?: number;
 }): Promise<CreateWorkoutFormSeed>;
 export function buildWorkoutFormSeed(input: {
   kind: "edit";
-  userId: number;
   workoutId: number;
 }): Promise<UpdateWorkoutFormProps | null>;
 export function buildWorkoutFormSeed(input: {
   kind: "duplicate";
-  userId: number;
   workoutId: number;
 }): Promise<CreateWorkoutFormSeed | null>;
 export async function buildWorkoutFormSeed({
   kind,
   workoutId,
-  userId,
 }: {
   kind: WorkoutFormSeedMode;
   workoutId?: number;
-  userId: number;
 }): Promise<WorkoutFormSeed | null> {
+  const userId = await getSessionUserId();
 
   if (kind === "create") {
     return buildBlankWorkoutFormSeed(await getExerciseNames(userId));

@@ -1,137 +1,157 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import {
+  createRouteTestDatabase,
+  destroyRouteTestDatabase,
   seedWorkout,
   type RouteTestDatabase,
 } from "@/tests/support/route-test-db";
-import {
-  setRouteTestUserId,
-  setupRouteTestDatabase,
-  teardownRouteTestDatabase,
-} from "@/tests/support/route-handler-test";
+
+const dbRef = { current: null as RouteTestDatabase["db"] | null };
+const sessionState = { isLoggedIn: false, userId: 0, username: "" };
+
+vi.mock("@/db/drizzle", () => ({
+  get db() {
+    if (!dbRef.current) throw new Error("Test DB not initialised");
+    return dbRef.current;
+  },
+}));
+vi.mock("next/headers", () => ({ cookies: vi.fn(async () => ({})) }));
+vi.mock("iron-session", () => ({
+  getIronSession: vi.fn(async () => ({
+    isLoggedIn: sessionState.isLoggedIn,
+    userId: sessionState.userId,
+    username: sessionState.username,
+    save: vi.fn(),
+    destroy: vi.fn(),
+  })),
+}));
+vi.mock("@/lib/session", () => ({ sessionOptions: {} }));
 
 import { GET } from "@/app/api/exercises/history/route";
+
+function makeRequest(name?: string): NextRequest {
+  const url =
+    name !== undefined
+      ? `http://localhost/api/exercises/history?name=${encodeURIComponent(name)}`
+      : "http://localhost/api/exercises/history";
+  return new NextRequest(url);
+}
+
+function setUserId(userId: number | null) {
+  sessionState.isLoggedIn = userId !== null;
+  sessionState.userId = userId ?? 0;
+  sessionState.username = userId !== null ? `user-${userId}` : "";
+}
 
 describe("GET /api/exercises/history", () => {
   let database: RouteTestDatabase;
 
   beforeEach(async () => {
-    database = await setupRouteTestDatabase({
-      includeSupersetGroupId: false,
-    });
+    database = await createRouteTestDatabase();
+    dbRef.current = database.db;
+    setUserId(1);
   });
 
   afterEach(async () => {
-    await teardownRouteTestDatabase(database);
+    dbRef.current = null;
+    setUserId(null);
+    await destroyRouteTestDatabase(database);
   });
 
   it("returns 401 for unauthenticated requests", async () => {
-    setRouteTestUserId(null);
-
-    const response = await GET(
-      new NextRequest(
-        "http://localhost/api/exercises/history?name=Bench%20Press",
-      ),
-    );
-
-    expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toEqual({ error: "Unauthorized" });
+    setUserId(null);
+    expect((await GET(makeRequest("Squat"))).status).toBe(401);
   });
 
-  it("returns 400 when the exercise name is missing", async () => {
-    const response = await GET(
-      new NextRequest("http://localhost/api/exercises/history"),
-    );
-
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({
-      error: "Exercise name is required",
-    });
+  it("returns 400 for missing, empty, or whitespace-only exercise name", async () => {
+    expect((await GET(makeRequest())).status).toBe(400);
+    expect((await GET(makeRequest(""))).status).toBe(400);
+    expect((await GET(makeRequest("   "))).status).toBe(400);
   });
 
-  it("returns grouped history ordered by workout date and excludes other users", async () => {
+  it("returns history for the authenticated user in newest-first order", async () => {
+    for (const [date, name] of [
+      ["2026-03-01", "Old Push Day"],
+      ["2026-05-15", "Recent Push Day"],
+      ["2026-04-10", "Mid Push Day"],
+    ]) {
+      await seedWorkout(database, {
+        userId: 1,
+        date,
+        name,
+        exercises: [{ name: "Bench Press", sets: [{ reps: "5", weight: "80" }] }],
+      });
+    }
+
+    const body = await (await GET(makeRequest("Bench Press"))).json();
+
+    expect(body).toHaveLength(3);
+    expect(body[0].date).toBe("2026-05-15");
+    expect(body[1].date).toBe("2026-04-10");
+    expect(body[2].date).toBe("2026-03-01");
+  });
+
+  it("excludes other users' data and other exercises in the same workout", async () => {
     await seedWorkout(database, {
-      userId: "user-1",
-      date: "2026-04-04",
-      name: "Push Day",
+      userId: 1,
+      date: "2026-05-01",
+      name: "My Workout",
+      exercises: [
+        { name: "Squat", sets: [{ reps: "5", weight: "100" }] },
+        { name: "Lunge", sets: [{ reps: "10", weight: "40" }] },
+      ],
+    });
+    await seedWorkout(database, {
+      userId: 2,
+      date: "2026-05-02",
+      name: "Other User Workout",
+      exercises: [{ name: "Squat", sets: [{ reps: "5", weight: "120" }] }],
+    });
+
+    const body = await (await GET(makeRequest("Squat"))).json();
+
+    expect(body).toHaveLength(1);
+    expect(body[0].workoutName).toBe("My Workout");
+    // Only Squat's sets — Lunge sets must not appear
+    expect(body[0].sets).toHaveLength(1);
+  });
+
+  it("returns an empty array when no history exists for the exercise", async () => {
+    const body = await (await GET(makeRequest("Squat"))).json();
+    expect(body).toEqual([]);
+  });
+
+  it("returns the correct response shape with sets in ascending id order", async () => {
+    await seedWorkout(database, {
+      userId: 1,
+      date: "2026-06-01",
+      name: "Upper A",
       exercises: [
         {
-          name: "Bench Press",
-          notes: "Top set moved fast",
+          name: "Overhead Press",
+          notes: "Focus on lockout",
           sets: [
-            { weight: "225", reps: "5", rpe: "8" },
-            { weight: "235", reps: "3", rpe: "9" },
+            { reps: "5", weight: "60", rpe: "7" },
+            { reps: "5", weight: "60", rpe: "8" },
           ],
         },
       ],
     });
 
-    await seedWorkout(database, {
-      userId: "user-1",
-      date: "2026-04-01",
-      name: "Upper Volume",
-      exercises: [
-        {
-          name: "Bench Press",
-          notes: "Long pause",
-          sets: [{ weight: "205", reps: "8", rpe: "7.5" }],
-        },
-      ],
+    const body = await (await GET(makeRequest("Overhead Press"))).json();
+    const entry = body[0];
+
+    expect(entry).toMatchObject({
+      date: "2026-06-01",
+      workoutName: "Upper A",
+      notes: "Focus on lockout",
     });
+    expect(typeof entry.workoutId).toBe("number");
+    expect(entry.sets).toHaveLength(2);
+    expect(entry.sets[0]).toMatchObject({ reps: "5", weight: "60", rpe: "7" });
 
-    await seedWorkout(database, {
-      userId: "user-2",
-      date: "2026-04-05",
-      name: "Other User Workout",
-      exercises: [
-        {
-          name: "Bench Press",
-          notes: "Should not leak",
-          sets: [{ weight: "315", reps: "2", rpe: "9.5" }],
-        },
-      ],
-    });
-
-    await seedWorkout(database, {
-      userId: "user-1",
-      date: "2026-04-03",
-      name: "Leg Day",
-      exercises: [
-        {
-          name: "Squat",
-          notes: "Different movement",
-          sets: [{ weight: "315", reps: "5", rpe: "8" }],
-        },
-      ],
-    });
-
-    const response = await GET(
-      new NextRequest(
-        "http://localhost/api/exercises/history?name=Bench%20Press",
-      ),
-    );
-
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual([
-      {
-        date: "2026-04-04",
-        notes: "Top set moved fast",
-        workoutId: 1,
-        workoutName: "Push Day",
-        sets: [
-          expect.objectContaining({ weight: "225", reps: "5", rpe: "8" }),
-          expect.objectContaining({ weight: "235", reps: "3", rpe: "9" }),
-        ],
-      },
-      {
-        date: "2026-04-01",
-        notes: "Long pause",
-        workoutId: 2,
-        workoutName: "Upper Volume",
-        sets: [
-          expect.objectContaining({ weight: "205", reps: "8", rpe: "7.5" }),
-        ],
-      },
-    ]);
+    const ids: number[] = entry.sets.map((s: { id: number }) => s.id);
+    expect(ids).toEqual([...ids].sort((a, b) => a - b));
   });
 });

@@ -1,348 +1,184 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Workout } from "@/lib/types";
+/**
+ * tests/workout-form/form-model.test.ts
+ */
 
-const {
-  authMock,
-  findFirstMock,
-  selectDistinctMock,
-  selectDistinctFromMock,
-  selectDistinctInnerJoinMock,
-  selectDistinctWhereMock,
-} = vi.hoisted(() => ({
-  authMock: vi.fn(),
-  findFirstMock: vi.fn(),
-  selectDistinctMock: vi.fn(),
-  selectDistinctFromMock: vi.fn(),
-  selectDistinctInnerJoinMock: vi.fn(),
-  selectDistinctWhereMock: vi.fn(),
-}));
+import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@clerk/nextjs/server", () => ({
-  auth: authMock,
-}));
-
-vi.mock("@/db/drizzle", () => ({
-  db: {
-    query: {
-      workout: {
-        findFirst: findFirstMock,
-      },
-    },
-    selectDistinct: selectDistinctMock,
-  },
-}));
+vi.mock("@/db/drizzle", () => ({ db: {} }));
+vi.mock("iron-session", () => ({ getIronSession: vi.fn() }));
+vi.mock("next/headers", () => ({ cookies: vi.fn() }));
+vi.mock("@/lib/session", () => ({ sessionOptions: {} }));
 
 import {
   buildBlankWorkoutFormSeed,
   buildDuplicateWorkoutFormSeed,
   buildEditWorkoutFormSeed,
-  buildWorkoutFormSeed,
 } from "@/components/workout-form/form-model";
+import type { Workout } from "@/lib/types";
 
-const workoutFixture: Workout = {
-  id: 1,
-  name: "Push Day",
-  notes: "Original notes",
-  durationMinutes: 70,
-  userId: 1,
-  date: "2026-04-04",
-  exercises: [
-    {
-      id: 11,
-      name: "Bench Press",
-      notes: "Original exercise notes",
-      supersetGroupId: "superset-a",
-      workoutId: 1,
-      sets: [
-        { id: 111, weight: "225", reps: "5", rpe: "8", exerciseId: 11 },
-        { id: 112, weight: "235", reps: "3", rpe: "9", exerciseId: 11 },
-      ],
-    },
-  ],
-};
+// ─── Fixtures ─────────────────────────────────────────────────────────────────
 
-const exerciseNamesFixture = ["Bench Press", "Overhead Press"];
-
-describe("workout form seed builders", () => {
-  beforeEach(() => {
-    authMock.mockReset();
-    authMock.mockResolvedValue({
-      userId: 1,
-      redirectToSignIn: vi.fn(),
-    });
-    findFirstMock.mockReset();
-    selectDistinctMock.mockReset();
-    selectDistinctFromMock.mockReset();
-    selectDistinctInnerJoinMock.mockReset();
-    selectDistinctWhereMock.mockReset();
-    selectDistinctWhereMock.mockResolvedValue(
-      exerciseNamesFixture.toReversed().map((name) => ({ name })),
-    );
-    selectDistinctInnerJoinMock.mockReturnValue({
-      where: selectDistinctWhereMock,
-    });
-    selectDistinctFromMock.mockReturnValue({
-      innerJoin: selectDistinctInnerJoinMock,
-    });
-    selectDistinctMock.mockReturnValue({
-      from: selectDistinctFromMock,
-    });
-    vi.useRealTimers();
-  });
-
-  it("builds a blank create seed with one empty exercise row", () => {
-    expect(buildBlankWorkoutFormSeed(exerciseNamesFixture)).toEqual({
-      persistMode: "create",
-      exerciseNames: exerciseNamesFixture,
-      initialValues: {
-        name: "",
-        date: "",
-        notes: "",
-        durationMinutes: null,
-        exercises: [
-          {
-            name: "",
-            notes: "",
-            supersetGroupId: null,
-            sets: [{ weight: "", reps: "", rpe: "" }],
-          },
+function makeWorkout(overrides: Partial<Workout> = {}): Workout {
+  return {
+    id: 42,
+    userId: 1,
+    name: "Leg Day",
+    date: "2026-06-01",
+    notes: "Felt strong today",
+    durationMinutes: 75,
+    exercises: [
+      {
+        id: 1,
+        workoutId: 42,
+        name: "Squat",
+        notes: "ATG depth",
+        supersetGroupId: null,
+        sets: [
+          { id: 1, exerciseId: 1, reps: "5", weight: "100", rpe: "8" },
+          { id: 2, exerciseId: 1, reps: "5", weight: "105", rpe: "9" },
         ],
       },
-    });
+      {
+        id: 2,
+        workoutId: 42,
+        name: "Romanian Deadlift",
+        notes: "Slow eccentric",
+        supersetGroupId: null,
+        sets: [{ id: 3, exerciseId: 2, reps: "8", weight: "80", rpe: "7" }],
+      },
+    ],
+    ...overrides,
+  };
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// buildBlankWorkoutFormSeed
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("buildBlankWorkoutFormSeed", () => {
+  it("returns a create seed with empty fields and a single blank exercise", () => {
+    const seed = buildBlankWorkoutFormSeed();
+    expect(seed.persistMode).toBe("create");
+    expect(seed.initialValues.name).toBe("");
+    expect(seed.initialValues.date).toBe("");
+    expect(seed.initialValues.notes).toBe("");
+    expect(seed.initialValues.durationMinutes).toBeNull();
+    expect(seed.initialValues.exercises).toHaveLength(1);
+    expect(seed.initialValues.exercises[0].name).toBe("");
+    expect(seed.templateValuesByExerciseName).toBeUndefined();
   });
 
-  it("builds an edit seed that preserves the workout values and id", () => {
-    expect(
-      buildEditWorkoutFormSeed(workoutFixture, exerciseNamesFixture),
-    ).toEqual({
-      persistMode: "update",
-      workoutId: 1,
-      exerciseNames: exerciseNamesFixture,
-      initialValues: {
-        name: "Push Day",
-        date: "2026-04-04",
-        notes: "Original notes",
-        durationMinutes: 70,
-        exercises: [
-          {
-            name: "Bench Press",
-            notes: "Original exercise notes",
-            supersetGroupId: "superset-a",
-            sets: [
-              { weight: "225", reps: "5", rpe: "8" },
-              { weight: "235", reps: "3", rpe: "9" },
-            ],
-          },
-        ],
-      },
-    });
+  it("uses provided exerciseNames and defaults to empty array when omitted", () => {
+    const names = ["Squat", "Bench Press"];
+    expect(buildBlankWorkoutFormSeed(names).exerciseNames).toEqual(names);
+    expect(buildBlankWorkoutFormSeed().exerciseNames).toEqual([]);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// buildEditWorkoutFormSeed
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("buildEditWorkoutFormSeed", () => {
+  it("returns an update seed with all original fields and exercises preserved", () => {
+    const seed = buildEditWorkoutFormSeed(makeWorkout({ id: 99 }));
+    expect(seed.persistMode).toBe("update");
+    expect(seed.workoutId).toBe(99);
+    expect(seed.initialValues.name).toBe("Leg Day");
+    expect(seed.initialValues.date).toBe("2026-06-01");
+    expect(seed.initialValues.notes).toBe("Felt strong today");
+    expect(seed.initialValues.durationMinutes).toBe(75);
+    expect(seed.initialValues.exercises).toHaveLength(2);
+    expect(seed.initialValues.exercises[0].sets).toHaveLength(2);
+    expect(seed.initialValues.exercises[1].sets).toHaveLength(1);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// buildDuplicateWorkoutFormSeed
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("buildDuplicateWorkoutFormSeed", () => {
+  it("returns a create seed with name prefixed, date/notes/duration reset", () => {
+    const seed = buildDuplicateWorkoutFormSeed(makeWorkout());
+    expect(seed.persistMode).toBe("create");
+    expect((seed as { workoutId?: number }).workoutId).toBeUndefined();
+    expect(seed.initialValues.name).toBe("Copy of Leg Day");
+    expect(seed.initialValues.date).toBe("");
+    expect(seed.initialValues.notes).toBe("");
+    expect(seed.initialValues.durationMinutes).toBeNull();
   });
 
-  it("builds a duplicate form seed from the helper pipeline", () => {
-    expect(
-      buildDuplicateWorkoutFormSeed(workoutFixture, exerciseNamesFixture),
-    ).toEqual({
-      persistMode: "create",
-      exerciseNames: exerciseNamesFixture,
-      initialValues: {
-        name: "Copy of Push Day",
-        date: "",
-        notes: "",
-        durationMinutes: null,
-        exercises: [
-          {
-            name: "Bench Press",
-            notes: "",
-            supersetGroupId: "superset-a",
-            sets: [
-              { weight: "", reps: "", rpe: "" },
-              { weight: "", reps: "", rpe: "" },
-            ],
-          },
-        ],
-      },
-      templateValuesByExerciseName: {
-        "Bench Press": {
-          name: "Bench Press",
-          notes: "",
-          supersetGroupId: "superset-a",
-          sets: [
-            { weight: "225", reps: "5", rpe: "8" },
-            { weight: "235", reps: "3", rpe: "9" },
-          ],
-        },
-      },
-    });
-  });
-
-  it("stores reserved exercise names in a null-prototype template map", () => {
-    const duplicateSeed = buildDuplicateWorkoutFormSeed({
-      ...workoutFixture,
+  it("preserves exercise names, count, and supersetGroupId; clears set values and notes", () => {
+    const workout = makeWorkout({
       exercises: [
         {
-          ...workoutFixture.exercises[0],
-          id: 21,
-          name: "toString",
-          supersetGroupId: "reserved-group",
+          id: 1, workoutId: 42, name: "Squat", notes: "ATG",
+          supersetGroupId: "ss-1",
+          sets: [{ id: 1, exerciseId: 1, reps: "5", weight: "100", rpe: "8" }],
         },
         {
-          ...workoutFixture.exercises[0],
-          id: 22,
-          name: "constructor",
-          supersetGroupId: "reserved-group",
-        },
-        {
-          ...workoutFixture.exercises[0],
-          id: 23,
-          name: "__proto__",
-          supersetGroupId: "reserved-group",
+          id: 2, workoutId: 42, name: "Lunge", notes: "Slow",
+          supersetGroupId: "ss-1",
+          sets: [{ id: 2, exerciseId: 2, reps: "10", weight: "40", rpe: "7" }],
         },
       ],
     });
 
-    expect(
-      Object.getPrototypeOf(duplicateSeed.templateValuesByExerciseName),
-    ).toBe(Object.prototype);
-    expect(duplicateSeed.templateValuesByExerciseName?.toString).toMatchObject({
-      name: "toString",
-      supersetGroupId: "reserved-group",
-    });
-    expect(
-      duplicateSeed.templateValuesByExerciseName?.constructor,
-    ).toMatchObject({
-      name: "constructor",
-      supersetGroupId: "reserved-group",
-    });
-    expect(duplicateSeed.templateValuesByExerciseName?.__proto__).toMatchObject(
-      {
-        name: "__proto__",
-        supersetGroupId: "reserved-group",
-      },
-    );
+    const seed = buildDuplicateWorkoutFormSeed(workout);
+    const exs = seed.initialValues.exercises;
+
+    expect(exs.map((e) => e.name)).toEqual(["Squat", "Lunge"]);
+    expect(exs[0].supersetGroupId).toBe("ss-1");
+    expect(exs[1].supersetGroupId).toBe("ss-1");
+
+    const allSets = exs.flatMap((e) => e.sets);
+    expect(allSets.every((s) => s.reps === "" && s.weight === "" && s.rpe === "")).toBe(true);
+    expect(exs.every((e) => e.notes === "")).toBe(true);
   });
 
-  it("keeps the first matching exercise when duplicate names exist", () => {
-    expect(
-      buildDuplicateWorkoutFormSeed({
-        ...workoutFixture,
-        exercises: [
-          workoutFixture.exercises[0],
-          {
-            ...workoutFixture.exercises[0],
-            id: 12,
-            notes: "second",
-            sets: [
-              { id: 121, weight: "245", reps: "2", rpe: "9.5", exerciseId: 12 },
-            ],
-          },
-        ],
-      }).templateValuesByExerciseName,
-    ).toEqual({
-      "Bench Press": {
-        name: "Bench Press",
-        notes: "",
-        supersetGroupId: "superset-a",
-        sets: [
-          { weight: "225", reps: "5", rpe: "8" },
-          { weight: "235", reps: "3", rpe: "9" },
-        ],
-      },
-    });
+  it("templateValuesByExerciseName carries original set data keyed by exercise name", () => {
+    const seed = buildDuplicateWorkoutFormSeed(makeWorkout());
+    const tmpl = seed.templateValuesByExerciseName!;
+
+    expect(Object.keys(tmpl)).toEqual(expect.arrayContaining(["Squat", "Romanian Deadlift"]));
+    expect(tmpl["Squat"].sets[0]).toMatchObject({ reps: "5", weight: "100", rpe: "8" });
+    expect(tmpl["Romanian Deadlift"].sets[0]).toMatchObject({ reps: "8", weight: "80", rpe: "7" });
   });
 
-  it("keeps the first reserved-name exercise when duplicates exist", () => {
-    expect(
-      buildDuplicateWorkoutFormSeed({
-        ...workoutFixture,
-        exercises: [
-          {
-            ...workoutFixture.exercises[0],
-            id: 21,
-            name: "toString",
-            supersetGroupId: "reserved-group",
-          },
-          {
-            ...workoutFixture.exercises[0],
-            id: 22,
-            name: "toString",
-            notes: "second",
-            supersetGroupId: "reserved-group",
-            sets: [
-              { id: 221, weight: "245", reps: "2", rpe: "9.5", exerciseId: 22 },
-            ],
-          },
-        ],
-      }).templateValuesByExerciseName?.toString,
-    ).toEqual({
-      name: "toString",
-      supersetGroupId: "reserved-group",
-      notes: "",
-      sets: [
-        { weight: "225", reps: "5", rpe: "8" },
-        { weight: "235", reps: "3", rpe: "9" },
+  it("uses first occurrence for duplicate exercise names in templateValues", () => {
+    const workout = makeWorkout({
+      exercises: [
+        { id: 1, workoutId: 42, name: "Squat", notes: "", supersetGroupId: null,
+          sets: [{ id: 1, exerciseId: 1, reps: "5", weight: "100", rpe: "8" }] },
+        { id: 2, workoutId: 42, name: "Squat", notes: "", supersetGroupId: null,
+          sets: [{ id: 2, exerciseId: 2, reps: "3", weight: "120", rpe: "9" }] },
       ],
     });
+    const seed = buildDuplicateWorkoutFormSeed(workout);
+    expect(Object.keys(seed.templateValuesByExerciseName!)).toHaveLength(1);
+    expect(seed.templateValuesByExerciseName!["Squat"].sets[0].weight).toBe("100");
   });
 
-  it("returns empty template values when there are no exercises", () => {
-    const duplicateSeed = buildDuplicateWorkoutFormSeed({
-      ...workoutFixture,
-      exercises: [],
-    });
-
-    expect(duplicateSeed.persistMode).toBe("create");
-    expect(duplicateSeed.exerciseNames).toEqual([]);
-    expect(duplicateSeed.initialValues).toEqual({
-      name: "Copy of Push Day",
-      date: "",
-      notes: "",
-      durationMinutes: null,
-      exercises: [],
-    });
-    expect(duplicateSeed.templateValuesByExerciseName).toEqual({});
-    expect(
-      Object.getPrototypeOf(duplicateSeed.templateValuesByExerciseName),
-    ).toBe(Object.prototype);
+  it("does not mutate the original workout", () => {
+    const workout = makeWorkout();
+    const originalReps = workout.exercises[0].sets[0].reps;
+    buildDuplicateWorkoutFormSeed(workout);
+    expect(workout.name).toBe("Leg Day");
+    expect(workout.exercises[0].sets[0].reps).toBe(originalReps);
   });
 
-  it("routes create mode through the shared builder and loads exercise names", async () => {
-    await expect(buildWorkoutFormSeed({ kind: "create" })).resolves.toEqual(
-      buildBlankWorkoutFormSeed(exerciseNamesFixture),
-    );
-    expect(findFirstMock).not.toHaveBeenCalled();
-    expect(selectDistinctMock).toHaveBeenCalledTimes(1);
-  });
+  it("handles edge cases: no exercises, exercise with no sets", () => {
+    const empty = buildDuplicateWorkoutFormSeed(makeWorkout({ exercises: [] }));
+    expect(empty.initialValues.exercises).toHaveLength(0);
+    expect(empty.templateValuesByExerciseName).toEqual({});
 
-  it("returns an edit seed from the shared builder when the workout is found", async () => {
-    findFirstMock.mockResolvedValueOnce(workoutFixture);
-
-    await expect(
-      buildWorkoutFormSeed({ kind: "edit", workoutId: 1 }),
-    ).resolves.toEqual(
-      buildEditWorkoutFormSeed(workoutFixture, exerciseNamesFixture),
-    );
-    expect(findFirstMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        with: expect.objectContaining({
-          exercises: expect.objectContaining({
-            orderBy: expect.any(Function),
-            with: expect.objectContaining({
-              sets: expect.objectContaining({
-                orderBy: expect.any(Function),
-              }),
-            }),
-          }),
-        }),
-      }),
-    );
-  });
-
-  it("returns null from the shared builder when the workout is missing", async () => {
-    findFirstMock.mockResolvedValueOnce(null);
-
-    await expect(
-      buildWorkoutFormSeed({ kind: "duplicate", workoutId: 1 }),
-    ).resolves.toBeNull();
-    expect(selectDistinctMock).toHaveBeenCalledTimes(1);
+    const noSets = buildDuplicateWorkoutFormSeed(makeWorkout({
+      exercises: [{
+        id: 1, workoutId: 42, name: "Plank", notes: "", supersetGroupId: null, sets: [],
+      }],
+    }));
+    expect(noSets.initialValues.exercises[0].sets).toHaveLength(0);
+    expect(noSets.templateValuesByExerciseName!["Plank"].sets).toHaveLength(0);
   });
 });

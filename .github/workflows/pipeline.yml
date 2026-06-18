@@ -26,7 +26,10 @@ jobs:
           version: 11
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Approve and run build scripts
+        run: pnpm rebuild
 
       - name: Run lint
         run: pnpm lint

@@ -65,22 +65,13 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11
-
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Approve and run build scripts
-        run: pnpm rebuild
+        run: npm install --legacy-peer-deps
 
       - name: Build Next.js application
-        run: pnpm build
+        run: npm run build
         env:
           NODE_ENV: production
-          NEXT_TURBOPACK: '0'
           TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
@@ -92,11 +83,11 @@ jobs:
           cp -r .next deployment-package/
           cp -r public deployment-package/ 2>/dev/null || true
           cp package.json deployment-package/
-          cp next.config.js deployment-package/
-
-      - name: Install production deps with npm
-        working-directory: deployment-package
-        run: npm install --omit=dev --ignore-scripts
+          cp package-lock.json deployment-package/ 2>/dev/null || true
+          cp next.config.js deployment-package/ 2>/dev/null || true
+          cd deployment-package
+          npm install --omit=dev --legacy-peer-deps --ignore-scripts
+          npm pkg set scripts.start="next start"
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
